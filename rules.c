@@ -56,6 +56,7 @@ static const char rcsid[] =
 #include "debug.h"
 #include "ipa.h"
 #include "path.h"
+#include "mysql.h"
 
 struct rule_slisthead rule_head;
 
@@ -107,7 +108,7 @@ static time_t	mk_time_exp_upto(time_t, char);
  * Check if there are some "subtracted" bytes. Check for counter overflowing.
  */
 static int
-add_chunk_to_rule(struct rule *rule, const u_quad_t *chunk_ptr)
+add_chunk_to_rule(struct rule *rule, const u_quad_t *chunk_ptr, struct ip_fw *kfwp)
 {
 	u_quad_t chunk = *chunk_ptr;
 
@@ -121,10 +122,18 @@ add_chunk_to_rule(struct rule *rule, const u_quad_t *chunk_ptr)
 		else {
 			if (update_db(rule, &uquad_max_ULL) < 0)
 				return -1;
+#ifdef WITH_MYSQL
+			update_sql_db(rule, &uquad_max_ULL);
+			sql_billing(rule, kfwp);
+#endif	
 			rule->bcnt = UQUAD_MAX - rule->bcnt;
 			rule->bcnt = chunk - rule->bcnt;
 			if (append_db(rule, &rule->bcnt) < 0)
 				return -1;
+#ifdef WITH_MYSQL	
+//			syslog(LOG_ERR, "%s:%d: append_sql_db\n", __FUNCTION__, __LINE__);
+			append_sql_db(rule, &rule->bcnt);
+#endif
 		}
 	}
 	if (!SLIST_EMPTY(&rule->limit_head))
@@ -188,6 +197,11 @@ do_ipfwac_for_rule(struct rule *rule)
 			if (IPFWP_NUMBER(kfwp) == fwacp->number &&
 			    subnumber == fwacp->subnumber) {
 				/* found IPFW rule in kernel table */
+				if (rule->state == 1){ /* block - dont count */
+					IPFWP_BCNT(kfwp) = 0;
+//					continue;
+				}
+
 				seen_flag = 1;
 				if (fwacp->seen == 0) {
 					fwacp->bcnt_old = IPFWP_BCNT(kfwp);
@@ -215,7 +229,7 @@ do_ipfwac_for_rule(struct rule *rule)
 					}
 					fwacp->bcnt_old = IPFWP_BCNT(kfwp);
 					if (fwacp->action == ADD) {
-						if (add_chunk_to_rule(rule, &chunk) < 0)
+						if (add_chunk_to_rule(rule, &chunk, kfwp) < 0)
 							return -1;
 					} else /* fwacp->action == SUB */
 						sub_chunk_from_rule(rule, &chunk);
@@ -236,6 +250,10 @@ do_ipfwac_for_rule(struct rule *rule)
 	}
 	if (update_db(rule, &rule->bcnt) < 0)
 		return -1;
+#ifdef WITH_MYSQL
+	update_sql_db(rule, &rule->bcnt);
+	sql_billing(rule, kfwp);
+#endif
 	return update_rule_limits(rule);
 }
 #endif /* WITH_IPFW */
@@ -317,6 +335,9 @@ do_ip6fwac_for_rule(struct rule *rule)
 	}
 	if (update_db(rule, &rule->bcnt) < 0)
 		return -1;
+#ifdef WITH_MYSQL
+	update_sql_db(rule, &rule->bcnt);
+#endif
 	return update_rule_limits(rule);
 }
 #endif /* WITH_IP6FW */
@@ -435,6 +456,9 @@ next_do_ipfilac:
 
 	if (update_db(rule, &rule->bcnt) < 0)
 		return -1;
+#ifdef WITH_MYSQL
+	update_sql_db(rule, &rule->bcnt);
+#endif
 	return update_rule_limits(rule);
 }
 #endif /* WITH_IPFIL */
@@ -499,6 +523,9 @@ do_pfac_for_rule(struct rule *rule)
 	}
 	if (update_db(rule, &rule->bcnt) < 0)
 		return -1;
+#ifdef WITH_MYSQL
+	update_sql_db(rule, &rule->bcnt);
+#endif
 	return update_rule_limits(rule);
 }
 #endif /* WITH_PF */
@@ -612,6 +639,10 @@ rule_inside_interval:						/* [ x ] */
 									/* we were not in this interval before */
 									if (append_db(rule, &zero_ULL) < 0)
 										return -1;
+#ifdef WITH_MYSQL
+//									syslog(LOG_ERR, "%s:%d: append_sql_db\n", __FUNCTION__, __LINE__);
+									append_sql_db(rule, &zero_ULL);
+#endif
 									rule->worktime_curr_interval_flag = 1;
 									set_rule_active(rule);
 									if (debug_worktime)
@@ -779,6 +810,10 @@ limit_inside_interval:							/* [ x ] */
 					/* append new record, but do not append it at the end of day */
 					if (append_db(rule, &zero_ULL) < 0)
 						return -1;
+#ifdef WITH_MYSQL
+//					syslog(LOG_ERR, "%s:%d: append_sql_db\n", __FUNCTION__, __LINE__);
+                                           append_sql_db(rule, &zero_ULL);
+#endif
 					rule->bcnt = 0;
 				}
 				if (rule->wakeup > rule->newrec_time)
@@ -807,6 +842,13 @@ limit_inside_interval:							/* [ x ] */
 		rule->firstcall = 0;
 	}
 	need_rules_check = 0;
+
+#if 0
+	SLIST_FOREACH(rule, &rule_head, rule_entry) {
+	struct ipfwac	*fwacp = rule->ipfwac;
+		kipfw_zero_table(fwacp->number);
+	}
+#endif
 	return 0;
 }
 
@@ -869,6 +911,10 @@ newday_came(void)
 				 */
 				if (append_db(rule, &zero_ULL) < 0)
 					return -1;
+#ifdef WITH_MYSQL
+//				syslog(LOG_ERR, "%s:%d: append_sql_db\n", __FUNCTION__, __LINE__);
+				append_sql_db(rule, &zero_ULL);
+#endif
 			}
 			continue;
 		}
@@ -924,6 +970,12 @@ newday_came(void)
 		rule->filename = path;
 		if (!rule->use_rule_worktime && append_db(rule, &zero_ULL) < 0)
 			return -1;
+#ifdef WITH_MYSQL
+		if (!rule->use_rule_worktime){
+//			syslog(LOG_ERR, "%s:%d: append_sql_db\n", __FUNCTION__, __LINE__);
+			append_sql_db(rule, &zero_ULL);
+		}
+#endif
 	}
 	process_mon = curr_tm.tm_mon + 1;
 	process_year = curr_tm.tm_year + 1900;
@@ -941,6 +993,7 @@ run_ipac(void)
 	time_t		new_curr_time;
 	struct tm	new_curr_tm;
 	sigset_t	sigmask, zeromask, pendmask;
+	struct rule	*rule;
 
 	sigemptyset(&zeromask);
 	sigemptyset(&sigmask);
@@ -1097,6 +1150,17 @@ time_changed:
 		} else {
 			curr_time = new_curr_time;
 			curr_tm = new_curr_tm;
+		}
+		if (goingdown_flag){
+#if 1
+//	struct rule	*rule;
+	SLIST_FOREACH(rule, &rule_head, rule_entry) {
+	struct ipfwac	*fwacp = rule->ipfwac;
+//		syslog(LOG_ERR, "zero!!! %d\n", fwacp->number);
+		kipfw_zero_table(fwacp->number);
+	}
+#endif
+
 		}
 
 		if (do_ipac() < 0)
@@ -1423,6 +1487,13 @@ do_reconfigure(void)
 	if (db_dir_bkp != db_dir_default)
 		free(db_dir_bkp);
 	process_mon = process_year = 0;
+
+#ifdef WITH_MYSQL
+       if (init_sql_db() < 0){
+       syslog(LOG_ERR, "MySQL reconfigure filed :-(( continue fork...");
+/*             return -1;      */
+       }
+#endif
 	return init_db();
 }
 

@@ -57,6 +57,7 @@ static char *path_devnull = "/dev/null";
 #include "db.h"
 #include "path.h"
 #include "rules.h"
+#include "mysql.h"
 
 /*
  * This file is compiled first, check if we have at least one
@@ -232,6 +233,12 @@ main(int argc, char *argv[])
 		abnormalterm();
 	if (init_db() < 0)
 		abnormalterm();
+#ifdef WITH_MYSQL
+	if (init_sql_db() < 0){
+	syslog(LOG_INFO, "MYSQL start filed ;-((( continue without mysql");
+	/*	abnormalterm(); */
+	}
+#endif
 
 #ifdef WITH_IPFW
 	if (use_ipfw)

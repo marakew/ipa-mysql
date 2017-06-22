@@ -561,12 +561,27 @@ check_main_db_dir(void)
 	if (statbuf.st_uid != 0) {
 		syslog(LOG_ERR, "main database directory %s has wrong owner UID %d (it should be owned by root)",
 		    db_dir, statbuf.st_uid);
-		return -1;
+
+		/* FIX dir owner  	*/
+	 if (chown(db_dir, 0, 0) < 0) {
+                syslog(LOG_ERR, "chown(%s, 0, 0): %m", db_dir);
+                return -1;
+        	}
+
+	/*	return -1;	*/
 	}
 	if (PERMMASK(statbuf.st_mode) != MAIN_DB_DIR_PERM) {
 		syslog(LOG_ERR, "main database directory %s has wrong permission bits 0%03o (they should be 0%03o)",
 		    db_dir, PERMMASK(statbuf.st_mode), MAIN_DB_DIR_PERM);
-		return -1;
+
+		/* FIX dir mode  	*/
+ 	 if (chmod(db_dir, MAIN_DB_DIR_PERM) < 0) {
+                syslog(LOG_ERR, "chmod(%s, 0%03o): %m", db_dir, statbuf.st_mode & MAIN_DB_DIR_PERM);
+                return -1;
+		}	
+
+	/*	return -1;	*/
+
 	}
 	return 0;
 }
@@ -807,7 +822,14 @@ check_lock_db_file(void)
 		if (PERMMASK(statbuf.st_mode) != LOCK_DB_FILE_PERM) {
 			syslog(LOG_ERR, "database lock file %s has wrong permission bits 0%03o (they should be 0%03o)",
 			    lock_db_file, PERMMASK(statbuf.st_mode), LOCK_DB_FILE_PERM);
-			return -1;
+
+		if (chmod(lock_db_file, LOCK_DB_FILE_PERM) < 0) {
+                		syslog(LOG_ERR, "chmod(%s, 0%03o): %m",
+                       			 lock_db_file, statbuf.st_mode & LOCK_DB_FILE_PERM);
+		                return -1;
+		        }
+
+	/*		return -1;	*/
 		}
 	}
 	return 0;

@@ -38,7 +38,7 @@ CC?=		/usr/bin/cc
 #	-Ox   - optimize;
 #	-g    - produce debugging information.
 #
-CFLAGS=		-Wall -O1 -g
+#CFLAGS=		-Wall -O1 -g
 
 #
 # PREFIX - prefix for all below listed paths
@@ -66,6 +66,12 @@ DST_ETC_DIR=	${PREFIX}/etc
 DST_RC_DIR=	${PREFIX}/etc/rc.d
 
 #
+# MySQL - library and include files locations (correct this if is needed!)
+#
+MYSQLLIBDIR=   /usr/local/lib/mysql
+MYSQLINCDIR=   /usr/local/include/mysql
+
+#
 # DST_EXAMPLE_DIR - where to install examples
 #
 DST_EXAMPLE_DIR=	${PREFIX}/share/examples/ipa
@@ -85,6 +91,10 @@ INSTALL_MAN=		${INSTALL} -c -g wheel -o root -m 0444
 INSTALL_DATA=		${INSTALL} -c -g wheel -o root -m 0444
 INSTALL_PROGRAM=	${INSTALL} -c -g wheel -o root -m 0555
 INSTALL_SCRIPT=		${INSTALL} -c -g wheel -o root -m 0500 
+#INSTALL_MAN=		${BSD_INSTALL_MAN}
+#INSTALL_DATA=		${BSD_INSTALL_DATA}
+#INSTALL_PROGRAM=	${BSD_INSTALL_PROGRAM}
+#INSTALL_SCRIPT=		${BSD_INSTALL_SCRIPT}
 INSTALL_MAN_DIR=	${INSTALL} -d -m 0555 -g wheel -o root
 INSTALL_DATA_DIR=	${INSTALL} -d -m 0555 -g wheel -o root
 
@@ -94,6 +104,15 @@ OS!=		${UNAME} -s
 
 IPA=		ipa.o cmd.o common.o config.o db.o debug.o kipfil.o rules.o
 IPASTAT=	ipastat.o common.o
+
+.if defined(WITH_MYSQL)
+MYSQLLIB=      mysqlclient
+CFLAGS+=       -I${MYSQLINCDIR}
+#LDFLAGS+=      -L${MYSQLLIBDIR} -l${MYSQLLIB}
+LDMYSQLFLAGS=	-L${MYSQLLIBDIR} -l${MYSQLLIB}
+CFLAGS+=	-DWITH_MYSQL
+IPA+=		mysql.o
+.endif
 
 .MAIN: checkos ${OS}
 
@@ -150,16 +169,21 @@ IPA+=		kpf.o
 FreeBSD NetBSD OpenBSD: ipa ipastat
 
 ipa: ${IPA}
-	${CC} -o ${.TARGET} ${IPA}
+	${CC} -o ${.TARGET} ${LDFLAGS} ${LDMYSQLFLAGS} ${IPA}
+	strip ipa
 
 ipastat: ${IPASTAT}
-	${CC} -o ${.TARGET} ${IPASTAT}
+	${CC} -o ${.TARGET} ${LDFLAGS} ${IPASTAT}
+	strip ipastat
 
 ipa.o: ipa.c ipa.h cmd.h config.h common.h db.h kipfil.h kpf.h kipfw.h kip6fw.h path.h rules.h system.h
 	${CC} ${CFLAGS} -o ${.TARGET} -c ipa.c
 
 ipastat.o: ipastat.c ipastat.h common.h path.h version.h
 	${CC} ${CFLAGS} -o ${.TARGET} -c ipastat.c
+
+mysql.o: mysql.c mysql.h
+	${CC} ${CFLAGS} -o ${.TARGET} -c mysql.c
 
 db.o: db.c db.h debug.h common.h config.h ipa.h path.h rules.h
 	${CC} ${CFLAGS} -o ${.TARGET} -c db.c
@@ -182,7 +206,8 @@ kipfil.o: kipfil.c kipfil.h debug.h system.h
 kpf.o: kpf.c kpf.h debug.h
 	${CC} ${CFLAGS} -o ${.TARGET} -c kpf.c
 
-config.o: config.c config.h common.h db.h debug.h ipa.h kipfw.h kip6fw.h kpf.h path.h rules.h system.h
+config.o: config.c config.h common.h db.h debug.h ipa.h kipfw.h kip6fw.h kpf.h path.h rules.h system.h \
+	mysql.h mysql.c
 	${CC} ${CFLAGS} -o ${.TARGET} -c config.c
 
 cmd.o: cmd.c cmd.h debug.h ipa.h
@@ -225,8 +250,10 @@ install:
 .endif
 	${INSTALL_MAN} man/ru_RU.KOI8-R/ipa.5 man/ru_RU.KOI8-R/ipa.conf.5 ${DST_MAN_DIR}/ru_RU.KOI8-R/man5
 	${INSTALL_MAN} man/ru_RU.KOI8-R/ipa.8 man/ru_RU.KOI8-R/ipastat.8 ${DST_MAN_DIR}/ru_RU.KOI8-R/man8
+.if !defined(NOPORTDOCS)
 	${INSTALL_DATA_DIR} ${DST_EXAMPLE_DIR}
 	${INSTALL_DATA} examples/* ${DST_EXAMPLE_DIR}
+.endif
 .if exists(${DST_RC_DIR})
 	${INSTALL_SCRIPT} etc/ipa.sh.sample ${DST_RC_DIR}
 .else

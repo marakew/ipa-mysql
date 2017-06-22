@@ -52,6 +52,7 @@ static const char rcsid[] =
 #include "ipa.h"
 #include "path.h"
 #include "rules.h"
+#include "mysql.h"
 
 static struct rule	*currule;	/* current rule */
 static struct limit	*curlimit;	/* current limit */
@@ -89,6 +90,10 @@ static SECTION	section, section_prev, section_top;
 static int	worktime_global_set;
 static int	global_section_set, debug_section_set, include_section_set;
 static int	only_abs_paths_set, lock_db_set;
+#ifdef WITH_MYSQL
+static int     sql_name_set, sql_user_set, sql_pswd_set,
+               sql_host_set, sql_port_set;
+#endif /* WITH_MYSQL */
 static int	debug_limit_set = 0, debug_exec_set = 0,
 		debug_time_set = 0, debug_worktime_set = 0,
 		debug_lock_set = 0, debug_include_set = 0;
@@ -98,6 +103,10 @@ static regex_t	reg_rule, reg_emptyline, reg_time_val, reg_size_val,
 		reg_if_nolimit,	reg_time_exp_val, reg_db_group_val,
 		reg_worktime_val, reg_yesno_val, reg_file,
 		reg_files;
+
+#ifdef WITH_MYSQL
+static regex_t reg_sql_port;
+#endif /* WITH_MYSQL */
 
 #ifdef WITH_IPFW
 static int	debug_ipfw_set = 0;
@@ -1367,6 +1376,60 @@ parse_info(char *s)
 	return 0;
 }
 
+#ifdef WITH_MYSQL
+/*
+ * Parse "whoname" parameter.
+ */
+static int
+parse_whoname(char *s)
+{
+	char	*whoname;
+
+	if ( (whoname = strdup(s)) == NULL) {
+		Syslog(LOG_ERR, "strdup: %m");
+		return -1;
+	}
+	syslog(LOG_DEBUG, "parse_who: %s", whoname);
+	free(currule->whoname);
+	currule->whoname = whoname;
+	return 0;
+}
+
+/*
+ * Parse "who" parameter.
+ */
+static int
+parse_who(char *s)
+{
+	u_int	who_id;
+
+	if ( (who_id = atoi(s)) == NULL) {
+		Syslog(LOG_ERR, "atoi: %m");
+		return -1;
+	}
+	currule->who = who_id;
+	return 0;
+}
+
+/*
+ * Parse "row" parameter.
+ */
+static int
+parse_row(char *s)
+{
+
+	syslog(LOG_DEBUG, "parse_row: %s", s);
+
+	if (strcmp(s,"in") == 0) currule->row = 1;
+	else {
+	if (strcmp(s,"out") == 0) currule->row = 2;
+	     else currule->row = 0;
+	}
+
+	return 0;
+}
+#endif
+
 /*
  * Parse "db_group" parameter.
  */
@@ -1419,6 +1482,83 @@ parse_db_dir(char *s)
 	}
 	return 0;
 }
+
+#ifdef WITH_MYSQL
+/*
+ * Parse "sql_name" parameter.
+ */
+static int
+parse_sql_name(char *s){
+       if (sql_name_set)
+               free(sql_name);
+       if ( (sql_name = strdup(s)) == NULL) {
+               Syslog(LOG_ERR, "strdup: %m");
+               return -1;
+       }
+       sql_name_set = 1;
+       return 0;
+}
+
+/*
+ * Parse "sql_user" parameter.
+ */
+static int
+parse_sql_user(char *s){
+       if (sql_user_set)
+               free(sql_user);
+       if ( (sql_user = strdup(s)) == NULL) {
+               Syslog(LOG_ERR, "strdup: %m");
+               return -1;
+       }
+       sql_user_set = 1;
+       return 0;
+}
+
+/*
+ * Parse "sql_pswd" parameter.
+ */
+static int
+parse_sql_pswd(char *s){
+       if (sql_pswd_set)
+               free(sql_pswd);
+       if ( (sql_pswd = strdup(s)) == NULL) {
+               Syslog(LOG_ERR, "strdup: %m");
+               return -1;
+       }
+       sql_pswd_set = 1;
+       return 0;
+}
+
+/*
+ * Parse "sql_host" parameter.
+ */
+static int
+parse_sql_host(char *s){
+       if (sql_host_set)
+               free(sql_host);
+       if ( (sql_host = strdup(s)) == NULL) {
+               Syslog(LOG_ERR, "strdup: %m");
+               return -1;
+       }
+       sql_host_set = 1;
+       return 0;
+}
+
+/*
+ * Parse "sql_port" parameter.
+ */
+static int
+parse_sql_port(char *s){
+       if (sql_port_set)
+               sql_port = 0;
+       if ( (sql_port = atoi(s)) == NULL) {
+               Syslog(LOG_ERR, "atoi: %m");
+               return -1;
+       }
+       sql_port_set = 1;
+       return 0;
+}
+#endif /* WITH_MYSQL */
 
 /*
  * Parse "worktime" parameter.
@@ -1968,6 +2108,17 @@ parse_config(int mode)
 	SLIST_INIT(&rule_head);
 	ruleno = 0;
 	db_dir = NULL;
+#ifdef WITH_MYSQL
+	sql_name_set = 0;
+	sql_user = SQLUSER;
+	sql_user_set = 0;
+	sql_pswd = SQLPSWD;
+	sql_pswd_set = 0;
+	sql_host = SQLHOST;
+	sql_host_set = 0;
+	sql_port = SQLPORT;
+	sql_port_set = 0;
+#endif /* WITH_MYSQL */
 	update_db_time_global = 0;
 	append_db_time_global = 0;
 	db_group_global.group_set = 0;
@@ -2248,6 +2399,13 @@ end_of_parsing:
 					break;
 				case GLOBAL_SECTION:
 					section = NONE_SECTION;
+#ifdef WITH_MYSQL
+                                       if (!sql_name_set) {
+                                           Syslog(LOG_ERR, "%s", cfgfilename);
+                                           Syslog(LOG_ERR, "parameter \"sql_name\" in \"global\" section should be present");
+                                           goto parsing_failed;
+                                       }
+#endif /* WITH_MYSQL */
 					break;
 				case LIMIT_SECTION:
 					if (curlimit->byte_limit == 0) {
@@ -2636,7 +2794,39 @@ end_of_parsing:
 				}
 				if (parse_info(sp) < 0)
 					goto parsing_failed;
-			} else if (strcmp(string, "db_group") == 0) {
+			}
+#ifdef WITH_MYSQL
+			  else if (strcmp(string, "who") == 0) {
+				if (section != RULE_SECTION) {
+					isnot_expected_msg("who");
+					goto parsing_failed;
+				}
+/*
+                               if (REGEXEC(sql_port, sp) != 0) {
+                                       wrong_format_msg(sp, "who", "only integer <= 99999 is possible");
+                                       goto parsing_failed;
+                               }
+*/
+				if (parse_whoname(sp) < 0)
+					goto parsing_failed;
+			}
+			  else if (strcmp(string, "row") == 0) {
+				if (section != RULE_SECTION) {
+					isnot_expected_msg("row");
+					goto parsing_failed;
+				}
+/*
+                               if (REGEXEC(sql_port, sp) != 0) {
+                                       wrong_format_msg(sp, "who", "only integer <= 99999 is possible");
+                                       goto parsing_failed;
+                               }
+*/
+				if (parse_row(sp) < 0)
+					goto parsing_failed;
+			}
+
+#endif
+			  else if (strcmp(string, "db_group") == 0) {
 				if (section != GLOBAL_SECTION && section != RULE_SECTION) {
 					isnot_expected_msg("db_group");
 					goto parsing_failed;
@@ -2666,7 +2856,50 @@ end_of_parsing:
 				}
 				if (parse_db_dir(sp) < 0)
 					goto parsing_failed;
-			} else if (strcmp(string, "debug_exec") == 0) {
+			}
+#ifdef WITH_MYSQL
+                        else if (strcmp(string, "sql_name") == 0) {
+                               if (section != GLOBAL_SECTION) {
+                                       isnot_expected_msg("sql_name");
+                                       goto parsing_failed;
+                               }
+                               if (parse_sql_name(sp) < 0)
+                                       goto parsing_failed;
+                       } else if (strcmp(string, "sql_user") == 0) {
+                               if (section != GLOBAL_SECTION) {
+                                       isnot_expected_msg("sql_user");
+                                       goto parsing_failed;
+                               }
+                               if (parse_sql_user(sp) < 0)
+                                       goto parsing_failed;
+                       } else if (strcmp(string, "sql_pswd") == 0) {
+                               if (section != GLOBAL_SECTION) {
+                                       isnot_expected_msg("sql_pswd");
+                                       goto parsing_failed;
+                               }
+                               if (parse_sql_pswd(sp) < 0)
+                                       goto parsing_failed;
+                       } else if (strcmp(string, "sql_host") == 0) {
+                               if (section != GLOBAL_SECTION) {
+                                       isnot_expected_msg("sql_host");
+                                       goto parsing_failed;
+                               }
+                               if (parse_sql_host(sp) < 0)
+                                       goto parsing_failed;
+                       } else if (strcmp(string, "sql_port") == 0) {
+                               if (section != GLOBAL_SECTION) {
+                                       isnot_expected_msg("sql_port");
+                                       goto parsing_failed;
+                               }
+                               if (REGEXEC(sql_port, sp) != 0) {
+                                       wrong_format_msg(sp, "sql_port", "only integer <= 99999 is possible");
+                                       goto parsing_failed;
+                               }
+                               if (parse_sql_port(sp) < 0)
+                                       goto parsing_failed;
+                       }
+#endif /* WITH_MYSQL */
+			  else if (strcmp(string, "debug_exec") == 0) {
 				if (section != DEBUG_SECTION) {
 					isnot_expected_msg("debug_exec");
 					goto parsing_failed;
@@ -3051,6 +3284,9 @@ build_config_regexes(void)
 #define pat_yesno_val	"^([yY][eE][sS]|[nN][oO])$"
 #define pat_file	"^file[ \t]*(\\([ \t]*\\?[ \t]*\\))?$"
 #define pat_files	"^files[ \t]*(\\([ \t]*\\?[ \t]*\\))?[ \t]*\\(.*\\)$"
+#ifdef WITH_MYSQL
+#define pat_sql_port    "^[[:digit:]]{1,5}$"
+#endif /* WITH_MYSQL */
 
 	static int	already_built = 0;
 
@@ -3067,6 +3303,9 @@ build_config_regexes(void)
 #if defined(WITH_IPFW) || defined(WITH_IP6FW)
 	REGCOMP(ipfw_val);
 #endif
+#ifdef WITH_MYSQL
+        REGCOMP(sql_port);
+#endif /* WITH_MYSQL */
 	REGCOMP(emptyline);
 	REGCOMP(size_val);
 	REGCOMP(time_val);
@@ -3452,6 +3691,18 @@ show_config(void)
 		if (db_dir != NULL)
 			printf("    db_dir = %s\n", db_dir);
 		show_db_group(&db_group_global);
+#ifdef WITH_MYSQL
+		if (sql_name_set)
+			printf("    sql_name = %s\n", sql_name);
+		if (sql_user_set)
+			printf("    sql_user = %s\n", sql_user);
+		if (sql_pswd_set)
+			printf("    sql_pswd = %s\n", sql_pswd);
+		if (sql_host_set)
+			printf("    sql_host = %s\n", sql_host);
+		if (sql_port_set)
+			printf("    sql_port = %d\n", sql_port);
+#endif /* WITH_MYSQL */
 		if (lock_db_set)
 			printf("    lock_db = %s\n", boolean_str(lock_db));
 		if (lock_wait_time != 0)

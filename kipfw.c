@@ -206,6 +206,124 @@ kipfw_read_table(void)
 	return 0;
 }
 
+
+int
+kipfw_zero_table(int number){
+#if __FreeBSD_version < 500000  /* 4.11 */
+	struct ip_fw rule;
+#else
+	int	rule;
+#endif
+	int nbytes;
+
+#if __FreeBSD_version < 500000  /* 4.11 */
+		memset(&rule, 0, sizeof(rule));
+		rule.fw_number = number;
+#else
+		rule = number;
+#endif
+		nbytes = sizeof(rule);
+
+//		syslog(LOG_ERR, "%s: ZERO %d\n", __FUNCTION__, number);
+
+		if (setsockopt(sd, IPPROTO_IP, IP_FW_ZERO, &rule, nbytes) < 0) {
+			syslog(LOG_ERR, "%s: setsockopt(IP_FW_ZERO): %m", __FUNCTION__);
+			return -1;
+		}
+}
+
+int
+kipfw_delete_table(struct ip_fw *kipfw_){
+
+#if __FreeBSD_version < 500000  /* 4.11 */
+	struct ip_fw rule;
+#else
+	int rule;
+#endif
+	int nbytes;
+
+#if __FreeBSD_version < 500000  /* 4.11 */
+	memset(&rule, 0, sizeof(rule));
+	rule.fw_number = kipfw_->fw_number;
+#else
+	rule = kipfw_->rulenum;
+#endif
+	nbytes = sizeof(rule);
+
+#if 1
+		if (setsockopt(sd, IPPROTO_IP, IP_FW_DEL, &rule, nbytes) < 0)
+		{
+			syslog(LOG_ERR, "%s: setsockopt(IP_FW_DEL): %m", __FUNCTION__);
+			return -1;
+		}
+#endif
+	return 1;
+}
+
+int
+kipfw_add_table(struct ip_fw *kipfw_, int state){
+	struct ip_fw rule;
+	int nbytes;
+
+	memcpy(&rule, kipfw_, sizeof(rule));
+	nbytes = sizeof(rule);
+#if 0
+	rule.fw_pcnt = 0;
+	rule.fw_bcnt = 0;
+#endif	
+#if __FreeBSD_version < 500000  /* 4.11 */
+	rule.fw_flg = ((rule.fw_flg >> 8)<< 8) | state;
+#else
+	rule.act_ofs = 0;
+	rule.cmd_len = 1;
+	rule.cmd[0].len = 1;
+	rule.cmd[0].opcode = state; //O_ACCEPT : O_DENY
+#endif
+
+			syslog(LOG_ERR, "%s: add %d  %qu packet %qu byte\n", __FUNCTION__,
+#if __FreeBSD_version < 500000  /* 4.11 */
+				rule.fw_number, rule.fw_pcnt, rule.fw_bcnt);
+#else
+				rule.rulenum, rule.pcnt, rule.bcnt);
+#endif
+
+#if 1
+		if (getsockopt(sd, IPPROTO_IP, IP_FW_ADD, &rule, &nbytes) < 0) {
+			syslog(LOG_ERR, "%s: getsockopt(IP_FW_ADD): %m", __FUNCTION__);
+			return -1;
+		}
+#endif
+	return 1;
+}
+
+int
+kipfw_change_table(struct ip_fw *kipfw_, int state){
+	int fw_flg;
+
+	--kipfw_;
+
+#if __FreeBSD_version < 500000	/* 4.11 */
+	fw_flg = kipfw_->fw_flg & IP_FW_F_COMMAND;
+	if ((fw_flg == IP_FW_F_DENY && state == IP_FW_F_DENY) ||
+	    (fw_flg == IP_FW_F_COUNT && state == IP_FW_F_COUNT))
+#else /* 5.x */
+//	fw_flg = ((ipfw_insn *)ACTION_PTR(kipfw))->opcode;
+	fw_flg = kipfw_->cmd[0].opcode;
+	if ((fw_flg == O_DENY && state == O_DENY) ||
+	    (fw_flg == O_COUNT && state == O_COUNT))
+#endif
+		return 0;
+
+	if ( kipfw_delete_table(kipfw_) < 0)
+		return -1;
+
+	if ( kipfw_add_table(kipfw_, state) < 0)
+		return -1;
+
+	return 1;
+}
+
+
 /*
  * Remove IP Firewall support: close descriptor for opened socket.
  */

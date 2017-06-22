@@ -227,6 +227,12 @@ struct rule {
 	int		fd;		/* == fileno(fp) */
 	char		*filename;	/* name of rule database file */
 	u_quad_t	maxchunk;	/* rule { maxchunk } */
+#ifdef WITH_MYSQL
+	u_int		who;		/* who id for this rule */
+	char		*whoname;	/* who name for this rule */
+	u_int		row;		/* row { 0 = none, 1 = in, 2 = out } */
+	u_int		state;		/* pass/deny */
+#endif
 #ifdef WITH_IPFW
 	struct ipfwac	*ipfwac;	/* ptr. on array for IPFW accounting */
 	u_int		nipfwac;	/* size of prev. array */
@@ -271,7 +277,10 @@ extern struct rule_slisthead rule_head;
 extern int		use_worktime;
 extern struct worktime	worktime_global[7];
 extern struct commands	startup_global, shutdown_global;
-
+#if 0
+extern void		set_rule_inactive(struct rule *);
+extern void		set_rule_active(struct rule *);
+#endif
 extern int		run_ipac(void);
 extern void		end_work(int), sig_alrm(int), reconfigure(int),
 			sig_chld(int), force_db_dump(int);
