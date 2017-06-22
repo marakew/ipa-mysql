@@ -1,0 +1,161 @@
+.\" Copyright (c) 2000-2003 Andrey Simonenko
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" @(#)$Id: ipa.5,v 1.6.2.3 2003/04/17 20:47:42 simon Exp $
+.\"
+.TH IPA 5 "April 17, 2003"
+.SH NAME
+ipa \- ipa(8) database implementation
+.SH DESCRIPTION
+The implementation of the \fBipa\fP(8) database and its format are here for developers,
+who want to develop some software based on this database, for administrators,
+who wants to fix something in the database.
+.PP
+All accounting database is stored in the directory \fB/var/ipa\fP by default
+or in other directory specified in the \fBdb_dir\fP parameter in the configuration
+file (read the \fBipa.conf\fP(5) manual page for more information).
+.PP
+Because main directory for accounting database can be different than default
+one, let's use \fBIPADIR\fP, instead of using default directory name.
+.PP
+Directory \fBIPADIR\fP contains other directories named by accounting rules
+names. If you removed some accounting <rule> from your configuration file and
+you do not want to keep accounting information for this <rule> any more, you
+can remove directory \fBIPADIR/<rule>\fP.
+.PP
+Each directory \fBIPADIR/<rule>\fP contains some files and directories.
+If name of directory consists only of digits then this directory contains
+files with accounting information for year. Number of year is equal to
+"name" of the directory. Such directories contain only files, a name of each
+file consists of two digits. These files contain accounting information per
+month, numbers of months are equal to "names" of files. If you do not want to keep
+accounting information for some years or some months you can remove appropriate
+directories or files. \fINOTE\fP: do not remove directories for current year and
+files for current month while \fBipa\fP(8) is run.
+.PP
+The \fBIPADIR/<rule>/info\fP file contains text information about <rule> and
+is overwrited everytime when \fBipa\fP(8) starts or makes reconfiguration.
+Information for this file is taken from the appropriate \fBinfo\fP parameter
+from the configuration file.
+.PP
+\fINOTE\fP: if you removed some \fBinfo\fP parameter from the
+configuration file you are not required to remove \fBinfo\fP file from
+the database, \fBipa\fP(8) will do it itself. This is true for \fBinfo\fP
+files for limits as well.
+.PP
+Each accounting record in the database is stored with two timestamps: the first
+timestamp is equal to local time when a record was appended, the second timestamp is
+equal to local time when this record was updated at last time. \fINOTE\fP: a
+record is updated even if accounting information was not changed. An accounting
+record has following format:
+.PP
+	DD/h1:m1:s1-h2:m2:s2 xxxxxxxxxxxxxxxxxxxx\\n
+.PP
+Where DD is a day when a record was appended, decimal number x..x is current value
+of a byte counter and takes 20 characters. h1:m1:s1 is the first timestamp and
+h2:m2:s2 is the second timestamp. Based on two timestamps of last record in each
+file in the database \fBipa\fP(8) checks if the database is correct when it
+starts. \fBipa\fP(8) also checks time and date when it works and if time and/or
+date were/was changed and this caused to unsuccessive time and/or date then
+\fBipa\fP(8) will just log a warning message and append a new record to the
+database. There is not any way for \fBipa\fP(8) to fix such problems. UTC time
+and/or local date can be changed by such programs as date(1), ntpdate(8). The
+time zone (TZ) can change local time, i.e. can make unsuccessive time changes.
+This is not an error for most of programs but for \fBipa\fP(8) this can cause
+an error (read more about some problems with time and local date in sections
+about \fBupdate_db_time\fP, \fBappend_db_time\fP and \fBworktime\fP parameters
+in the \fBipa.conf\fP(5) manual page). If \fBipa\fP(8) detects some problems
+with time or date, then you should manually fix them in the appropriate
+database file. You can do it with any text editor: just remove wrong lines, or
+rearrange wrong sequence of lines (remember that each line is ended by a new
+line character). \fINOTE\fP: probably you do not want to just remove wrong
+lines, because you will lose accounting information. \fINOTE\fP: the
+\fBipastat\fP(8) program does not show accounting information if it founds some
+error with dates by default, but there is the \fB-e\fP switch which allows to
+skip date checking.
+.PP
+Special value 24:00:00 for the second timestamp means the end of a day.
+.PP
+Directory \fBIPADIR/<rule>/limits\fP contains directories named by limits
+names for <rule>. If you removed some <limit> from <rule> from your
+configuration file and you do not want to keep information about that limit,
+then  you can remove directory \fBIPADIR/<rule>/limits/<limit>\fP. Such
+directories contain one or two files.
+.PP
+File \fBIPADIR/<rule>/limits/<limit>/limit\fP contains accounting information
+for <limit> from <rule>. \fBipa\fP(8) can find some error with dates
+and you also will need to fix these errors in this file. \fINOTE\fP: in some of
+cases with dates error and timestamp errors \fBipa\fP(8) can fix them itself,
+but a warning message for the information purpose will be send to syslog(8).
+Each line in this file is ended by a new line character. The first line has
+following format:
+.PP
+	xxxxxxxxxxxxxxxxxxxx yyyyyyyyyyyyyyyyyyyy\\n
+.PP
+Where decimal number x..x is the current value of the byte counter for the
+limit, decimal number y..y is a value of the \fBbyte_limit\fP parameter for
+the limit. Each field is 20 characters long.
+.PP
+All other lines have following format:
+.PP
+	X YYYY.DD.MM/hh.mm.ss\\n
+.PP
+YYYY.DD.MM/hh.mm.ss is date when some event happened. YYYY usually takes 4
+characters but is not limited to be just 4 characters long. Valid values for X
+are `\fBs\fP', `\fBz\fP', `\fBr\fP', `\fBe\fP', `\fBx\fP'. `\fBs\fP' stands
+for "Start" and means date when counter for limit was started.
+`\fBz\fP' stands for "Zero" and means date when counter for limit will
+be zeroed. `\fBr\fP' stands for "Reached" and means date when limit was
+reached. `\fBe\fP' stands for "Expired" and means date when reached limit
+will be expired. `\fBx\fP' stands for "Execute" and means date when commands
+from \fBexec\fP parameters were executed (from the \fBreach\fP or
+\fBexpire\fP section).
+.PP
+The \fBIPADIR/<rule>/limits/<limit>/info\fP file contains text information
+about <limit> and is overwrited everytime when \fBipa\fP(8) starts or makes
+reconfiguration. Information about this file is taken from the appropriate
+\fBinfo\fP parameter from the configuration file.
+.PP
+The owner of all directories and files in the database is the super-user.
+The group of some directory and files in it is determined by the \fBdb_group\fP
+parameter in the configuration file. "Other" users always are not allowed
+to access any database directory or file (except the \fBlock\ db\fP file).
+.PP
+There is a special file \fBIPADIR/lock\ db\fP (the file name has one
+whitespace character). If some program wants to access database files, it
+can obtain shared (or read) lock on this file. This locking is optional
+and should be use if \fBipa\fP(8) locks files in the database.
+Read manual page \fBipa.conf\fP(5) for more information about advantages
+and disadvantages of database locking feature and how \fBipa\fP(8) locks
+files in the database (paragraphs about the \fBlock_db\fP parameter).
+.SH FILES
+/var/ipa/
+.br
+/usr/local/etc/ipa.conf
+.SH SEE ALSO
+ipa(8), ipa.conf(5), ipastat(8)
+.SH AUTHOR
+Andrey\ Simonenko\ <simon@comsys.ntu-kpi.kiev.ua>
+.SH BUGS
+If you find any, please send email me.

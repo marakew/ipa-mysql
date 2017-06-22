@@ -1,0 +1,25 @@
+#!/bin/sh
+
+#
+# Shell script to run/stop/reconfigure/dump ipa(8).
+#
+# @(#)$Id: ipa.sh.sample,v 1.6 2002/12/19 18:56:05 simon Exp $
+#
+
+ipa=/usr/local/bin/ipa
+
+if [ ! -f ${ipa} -o ! -x ${ipa} ]; then
+	echo "Error: cannot find ${ipa}, or it is not executable."
+	exit 1
+fi
+
+if [ "x$1" = "x" -o "x$1" = "xstart" ]; then
+	${ipa} && echo -n " ipa"
+elif [ "x$1" = "xstop" -o "x$1" = "xshutdown" ]; then
+	${ipa} -k shutdown
+elif [ "x$1" = "xreconfigure" ]; then
+	${ipa} -k reconfigure
+elif [ "x$1" = "xdump" ]; then
+	${ipa} -k dump
+fi
+

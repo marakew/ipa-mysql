@@ -1,0 +1,1307 @@
+.\" Copyright (c) 2000-2003 Andrey Simonenko
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" @(#)$Id: ipa.conf.5,v 1.6.2.4 2003/07/08 08:30:02 simon Exp $
+.\"
+.TH IPA.CONF 5 "July 2, 2003"
+.SH NAME
+ipa.conf \- ipa(8) configuration file
+.SH DESCRIPTION
+The \fBipa.conf\fP file is a configuration file for \fBipa\fP(8).
+The \fB/usr/local/etc/ipa.conf\fP file or any other one specified in
+the \fBipa\fP(8) command line (the \fB-f\fP option for \fBipa\fP(8)) is read
+when \fBipa\fP(8) starts working or receives signal HUP.
+The complete description of the file format and possible parameters
+held within are here for reference purposes.
+.SH FILE FORMAT
+The \fBipa.conf\fP file can be quite simple and can be complex enough.
+The main idea is to place as much as possible to one configuration file instead of
+using external scripts.
+.PP
+If \fBipa\fP(8) is something new for you, please read this section from the
+first line to the last one. This manual page is not just the file format
+description, it is the complete documentation about all features of \fBipa\fP(8),
+possible pitfalls and step by step documentation how to get \fBipa\fP(8) work
+correctly.
+.PP
+A configuration file consists of sections and parameters. A section begins
+with the type of a section, followed by a name of a section and opened brace
+or followed just opened brace. Every section should be closed somewhere by
+closed brace:
+.PP
+	type-of-section [name-of-section] {
+.br
+	# parameters and other sections
+.br
+	}
+.PP	
+Sections contain parameters. Most of parameters have form:
+
+	parameter[(argument(s))] = value
+.PP
+All elements in a configuration file are case sensitive.
+.PP
+Any line beginning with the pound-sing `#' or the `;' character is ignored,
+as are lines containing only white-space characters (` ' and `\\t') and
+blank lines. But see the sentence below.
+.PP
+Any line ending in a `\\' character is "continued" on the next line. If a `\\'
+character is needed at the end of a line, but is not needed to be a
+"continued"-character, just add extra white-space character after it.
+.PP
+If one white-space character in a line is allowed, then as much as needed
+white-space characters can be written there for indenting your configuration file.
+.PP
+Theoretically length of a line in the configuration file is not limited.
+In implementation it is limited by max positive value of "int" C-type.
+.PP
+Some section should not be included inside other ones, some of them should be
+included inside other section. There are four sections, which always must be
+placed alone. They are \fBdebug\fP, \fBinclude\fP, \fBglobal\fP and \fBrule\fP 
+sections. The configuration file is not required to have any section, it can be
+even an empty file.
+.PP
+\fBipa\fP(8) makes IP accounting based on rules listed in the configuration file.
+The \fBrule\fP section has following format:
+.PP
+	rule <name-of-rule> {
+.br
+	# parameters and other sections
+.br
+	}
+.PP
+<name-of-rule> is a string without white-space characters, `{', `}', `#'
+and `;' characters. You should give such
+name for the rule which is also a valid name for the directory for your
+operating/file system, because each rule is represented as a directory in
+the database.
+.PP
+The \fBrule\fP section should have at least the \fBipfw\fP, \fBip6fw\fP,
+\fBpf\fP or \fBipfil\fP parameter. Any other parameters can be omitted. Parameters
+\fBipfw\fP, \fBip6fw\fP, \fBpf\fP and \fBipfil\fP are main parameters for IP
+accounting, they determine FreeBSD IPv4 Firewall (IPFW), FreeBSD IPv6 Firewall
+(IP6FW), OpenBSD Packet Filter (PF) and IP Filter (IPF) accounting rules,
+from which \fBipa\fP(8) takes IP accounting information. These parameters can
+be used together in the same rule.
+.PP
+Format for the \fBipfw\fP parameter is:
+.PP
+	ipfw = [-]number[.subnumber]
+.PP
+It is possible to use \fBip4fw\fP name for the \fBipfw\fP parameter. Both names
+are valid and refer to FreeBSD IPv4 Firewall or simply FreeBSD IP Firewall.
+.PP
+In the original format of a IPFW rule there is only one rule number. Extra
+subnumber can be added: if there are some IPFW rules with the same number,
+they are distinguished by subnumbers, first rule in the set of such rules has
+a subnumber equal to 0. If a subnumber is omitted, then it is treated as 0.
+Subnumber in IPFW rule is something new and is not mentioned in the ipfw(8)
+manual page. The `\fB-\fP' sign can be placed before a number of IPFW rule, in
+this case \fBipa\fP(8) subtracts accounting information of this IPFW rule.
+.PP
+Example:
+.PP
+	ipfw = 100 130.2 -150.1 20
+.br
+	ipfw = 100.0
+.PP
+If there are some \fBipfw\fP parameters in one \fBrule\fP section, then they are
+treated as one \fBipfw\fP parameter.
+.PP
+Format for the \fBip6fw\fP parameter is the same as for the \fBipfw\fP parameter.
+.PP
+Format for the \fBipfil\fP parameter is:
+.PP
+	ipfil = [-]i[group]@number
+.br
+	ipfil = [-]o[group]@number
+.PP
+The `\fBi\fP' character is used for the input side and the `\fBo\fP' character
+is used for the output side of the accounting IPF list. IPF rules are set
+up in some groups and have order numbers in those groups (read more information
+in the ipf(5) manual page). If a group number is omitted in the \fBipfil\fP
+parameter, then a group number is treated as 0 (default group number in IPF). First
+IPF rule in some group has a number equal to 1. This kind of enumeration of
+IPF rules has been taken from the ipfstat(8) program and from the ipf(5)
+manual page. The `\fB-\fP' sign can be placed before IPF number, in this
+case \fBipa\fP(8) subtracts accounting information of this IPF accounting
+rule.
+.PP
+Example:
+.PP
+	ipfil = o@10 o1@5
+.br
+	ipfil = -i12@4 o@2 o40@10
+.PP
+If there are some \fBipfil\fP parameters in one \fBrule\fP section, then they
+are treated as one \fBipfil\fP parameter.
+.PP
+Number of IPF rules and their group numbers can be taken from the output
+of the "ipfstat -iona" command.
+.PP
+Format for the \fBpf\fP parameter is:
+.PP
+	pf = [-]number
+.PP
+Example:
+.PP
+	pf = 1 -8 3
+.br
+	pf = 100
+.PP
+If there are some \fBpf\fP parameters in one \fBrule\fP section, then they are
+treated as one \fBpf\fP parameter.
+.PP
+\fBipa\fP(8) uses the u_quad_t C-type (unsigned long long)
+for storing IP accounting information (i.e.
+byte counters). The u_quad_t C-type is unsigned 64-bit integer, max value of
+this type is equal to 16777216\ Tbytes\ -\ 1\ byte (or UQUAD_MAX value). This value
+is big enough, but \fBipa\fP(8) is able to determine when this value is
+overflowed and appends a new record to the database in such case. Each record in
+the database consists of two fields. First field consists of two timestamps,
+first timestamp is equal to time when this record was added to the database and
+second timestamp is equal to time when this record was updated last time.
+Each timestamp consists of the day number and time (hours, minutes and seconds).
+Second field is a byte counter. Read more about the database implementation in
+the \fBipa\fP(5) manual page.
+.PP
+\fBipa\fP(8) is able not only summarize, but is able also subtract accounting
+counters (the `\fB-\fP' sign in the \fBipfw\fP, \fBip6fw\fP, \fBipfil\fP and
+\fBpf\fP parameters).
+Usually subtracted IPFW/IPF/PF accounting rules are parts of IPFW/IPF/PF
+accounting rules which are summarized in the same \fBrule\fP section. But if
+\fBipa\fP(8) should subtract more bytes than the byte counter for the rule has,
+then it stores this value in its internal structure for that rule and updates
+counter for the rule in the database as 0 bytes. \fINOTE\fP: \fBipa\fP(8) can
+remember only UQUAD_MAX bytes which should be subtracted, if there will be more
+bytes for subtraction than UQUAD_MAX value, then \fBipa\fP(8) will log a warning
+message. I think that you will never see such message in your log file
+(UQUAD_MAX value is too big), so you should test if your subtracted
+IPFW/IPF/PF accounting rules are correct. \fINOTE\fP: subtracted bytes
+are not stored in the database (this only has sense if \fBipa\fP(8) should
+subtract more bytes than the byte counter for the rule has). 
+.PP
+Following two parameter determine when a new record for the rule in the database
+is created and when a byte counter for the rule is updated. These values are
+useful for the \fBipastat\fP(8) program. \fBipastat\fP(8) uses only the database
+made by \fBipa\fP(8) and information in the database should be fresh, also
+following two parameters allow to increase probability to keep your database
+correct even if your system crashes.
+.PP
+The \fBupdate_db_time\fP parameter determines time interval when \fBipa\fP(8) should
+update byte counter for the rule.
+.PP
+Format for the \fBupdate_db_time\fP parameter is:
+.PP
+	update_db_time = <time>
+.PP
+Example:
+.PP
+	update_db_time = 10s
+.br
+	update_db_time = 2h30s
+.br
+	update_db_time = 13h3m 134s
+.PP
+The `\fBs\fP' character means seconds, `\fBm\fP' - minutes, `\fBh\fP' - hours.
+If <time> is specified as a complex value, then hours should be placed before
+minutes and seconds, minutes should be placed before seconds. Look at third
+example: 134 seconds are really 2 minutes and 14 seconds, this is not an error,
+but it is better to run \fBipa\fP(8) with option \fB-t\fP and check its output
+(may be you made a mistake and typed extra digit).
+.PP
+If the \fBupdate_db_time\fP parameter is omitted, then the same parameter from the
+\fBglobal\fP section is used. If that parameter is also omitted, then default
+value in 5 minutes is used.
+.PP
+\fINOTE\fP: if some of IPFW/IPF/PF rules specified in the \fBrule\fP section
+are "quickly" enough, then wrong value for the \fBupdate_db_time\fP parameter
+can give wrong results. For example update_db_time\ =\ 1h, one of
+IPFW rules counts bytes of one very quick connection. When \fBipa\fP(8)
+began to make accounting for this IPFW rule, byte counter was equal to
+1\ byte. During 1\ hour real byte counter became equal to
+(1\ +\ UQUAD_MAX\ +\ 1)\ bytes. When \fBipa\fP(8) wakes up, it checks
+this IPFW rule and determines that current byte counter is
+2\ bytes - 1\ byte = 1\ byte. This is wrong. To correct such problems
+the value of the \fBupdate_db_time\fP parameter should be less than time
+interval during which any of IPFW/IPF/PF rules in the \fBrule\fP section
+can be overflowed.
+.PP
+The \fBappend_db_time\fP parameter determines time interval when \fBipa\fP(8)
+should append a new record to the database.
+.PP
+Format for the \fBappend_db_time\fP parameter is:
+.PP
+	append_db_time = <time>
+.PP
+Example:
+.PP
+	append_db_time = 2h
+.PP
+This definition allows to store IP accounting for every two hours.
+.PP
+If the \fBappend_db_time\fP parameter is omitted, then the same parameter from
+the \fBglobal\fP section is used. If that parameter is also omitted, then there
+is no default value and a new record is appened when new day comes. This is also
+correct even if the \fBappend_db_time\fP parameter is present in the
+\fBrule\fP section or in the \fBglobal\fP section.
+.PP
+Usually a value of the \fBappend_db_time\fP parameter is greater than a value of
+the \fBupdate_db_time\fP parameter. But if a value of the \fBappend_db_time\fP
+parameter is less, then all warnings mentioned for the \fBupdate_db_time\fP
+parameter anywhere in this manual page are also correct for the
+\fBappend_db_time\fP parameter.
+.PP
+\fBipa\fP(8) can make network accounting not only for all days in
+a week, but only for some periods. The \fBworktime\fP parameter specifies time
+intervals when \fBipa\fP(8) should make IP accounting for some rule. If the
+\fBworktime\fP parameter is omitted, then the same parameter from the \fBglobal\fP
+section is used. If that parameter is also omitted, then accounting is made
+for all days.
+.PP
+Format for the \fBworktime\fP parameter is:
+.PP
+	worktime = <X> h1:m1-h2:m2 [h1:m1-h2:m2]
+.br
+	worktime = <X> *
+.PP
+<X> means a day of a week. Valid values for <X> are: `\fBS\fP' Sunday, `\fBM\fP'
+Monday, `\fBT\fP' Tuesday, `\fBW\fP' Wednesday, `\fBH\fP' Thursday, `\fBF\fP'
+Friday, `\fBA\fP' Saturday. There can be only one record for each day. Time
+intervals cannot be overlapped, or be placed not in order.
+.PP
+A new accounting record for the rule is appended to the database when a new
+time interval begins.
+.PP
+Example:
+.PP
+	worktime = M * T * W *
+.br
+	worktime = H 08:00-14:30 18:20-21:00 S 00:00-10:35
+.PP
+First parameter makes \fBipa\fP(8) to do IP accounting only at Monday, Tuesday and
+Wednesday. Second parameter makes \fBipa\fP(8) to do IP accounting at Thursday
+from 8:00 to 14:30 and from 18:20 to 21:00, at Sunday from midnight to 10:35.
+.PP
+\fINOTE\fP: if you would like to specified whole day you should use a `\fB*\fP'
+character or 00:00-24:00 interval, because intervals like 00:00-23:59 and
+00:00-00:00 are wrong. In the first case we lose 1 minute from 23:59 to 00:00
+(next day). In the second case we lose all minutes in a day.
+.PP
+If there are some \fBworktime\fP parameters in one section, then they are treated
+as one \fBworktime\fP parameter.
+.PP
+\fINOTE\fP: there are some programs such as date(1) or ntpdate(8), which can
+change UTC time and local time, also the time zone can change itself. As it is
+described in the \fBipa\fP(5) manual page this can cause an error for
+\fBipa\fP(8). Parameters \fBupdate_db_time\fP, \fBappend_db_time\fP and
+\fBworktime\fP can cause more such errors. For example if you call ntpdate(8)
+very often and value of the \fBupdate_db_time\fP parameter is equal to time
+interval of ntpdate(8) calls, then you can receive a lot of errors from
+\fBipa\fP(8).
+.PP
+The \fBmaxchunk\fP parameter allows to safely flush IPFW/IPF/PF rules or
+delete and add the same rules when \fBipa\fP(8) is running.
+.PP
+Format for the \fBmaxchunk\fP parameter is:
+.PP
+	maxchunk = <size>
+.PP
+If a new value of the byte counter for some IPFW/IPF/PF rule is less than its
+previous value and there is not the \fBmaxchunk\fP parameter, then \fBipa\fP(8)
+thinks that the byte counter for this IPFW/IPF/PF rule was overflowed and
+calculates appropriate value for the increase of the byte counter. But if
+there is the \fBmaxchunk\fP parameter and the increase of the byte counter for
+some IPFW/IPF/PF rule is greater than the value of the \fBmaxchunk\fP
+parameter, then \fBipa\fP(8) takes absolute value of the byte counter as the
+increase for this byte counter.
+.PP
+If the \fBmaxchunk\fP parameter in the \fBrule\fP section is omitted, then
+the same parameter from the \fBglobal\fP section is used. If that parameter is
+also omitted, then there is no default value and if you flush or remove and
+add the same IPFW/IPF/PF rule during \fBupdate_db_time\fP time interval,
+then \fBipa\fP(8) can think that the byte counter for this IPFW/IPF/PF rule
+was overflowed.
+.PP
+Example:
+.PP
+	maxchunk = 1T 20G 2M 100k 9b
+.br
+	maxchunk = 1M
+.br
+	maxchunk = 1G 100k
+.PP
+The `\fBT\fP' or `\fBt\fP' character means terabytes, `\fBG\fP' or `\fBg\fP' -
+Gbytes, `\fBM\fP' or `\fBm\fP' - Mbytes, `\fBK\fP' or `\fBk\fP' -
+Kbytes, `\fBB\fP' or `\fBb\fP' - bytes. If <size> is specified as a complex
+value, then Tbytes should be placed before Gbytes and Mbytes and so on.
+.PP
+\fINOTE\fP: too little value for the \fBmaxchunk\fP parameter can give wrong
+results. A value of the \fBmaxchunk\fP parameter should be greater than
+difference of byte counters of any of IPFW/IPF/PF accounting rules during
+\fBupdate_db_time\fP time interval.
+.PP
+\fINOTE\fP: it will be better to check some variables of IPFW/IPF/PF kernel
+structures inside \fBipa\fP(8) and determine if those rules have been
+changed. But there are not such variables in IPFW/IPF/PF kernel structures
+(at the moment when this manual page was being written), so you need to use the
+\fBmaxchunk\fP parameter.
+.PP
+Each rule directory (including all directories and files in it) in the
+database can be protected by permission bits.
+"Other" users always are not allowed to access any directory and file
+in the database (except the \fBlock\ db\fP file, but this is not
+a big problem if somebody locks it for a long time). Users, who belong
+to the group of the rule directory, are allowed to access this rule.
+The owner of all directories and files in the database is the super-user.
+.PP
+The \fBdb_group\fP parameter allows to specify group of users who are
+allowed to read accounting information for some rule.
+When \fBipa\fP(8) starts working (or receives signal \fBHUP\fP) it checks
+group owner and permission bits of directories for all rules listed in
+the configuration file(s) and if there is difference in group owner
+and/or permission bits of some directory and settings in the configuration
+file(s) (actually only one parameter \fBdb_group\fP determines this settings),
+then \fBipa\fP(8) fixes group owner and permission bits for every
+file and directory in the rule directory in the database.
+.PP
+The super-user is always allowed to read accounting information
+(the system gives such feature), so it is not necessary to setup
+any value for the \fBdb_group\fP parameter if you are going to
+access database only from super-user's login account.
+.PP
+Format for the \fBdb_group\fP parameter is:
+.PP
+	db_group = <group>
+.PP
+Where <group> is a valid group name or number of group.
+.PP
+Example:
+.PP
+	db_group = staff
+.br
+	db_group = 1001
+.PP
+If the \fBdb_group\fP parameter in the \fBrule\fP section is omitted,
+then the same parameter from the \fBglobal\fP section is used.
+If that parameter is also omitted, then there is no default value for
+this parameter.
+.PP
+The \fBglobal\fP section must be placed alone and has following format:
+.PP
+	global {
+.br
+	# parameters
+.br
+	}
+.PP
+Only parameters can be specified in the \fBglobal\fP section. They are:
+\fBupdate_db_time\fP, \fBappend_db_time\fP, \fBmaxchunk\fP, 
+\fBdb_group\fP, \fBdb_dir\fP, \fBlock_db\fP, \fBworktime\fP, 
+\fBlock_wait_time\fP and \fBonly_abs_paths\fP.
+.PP
+Parameters \fBupdate_db_time\fP, \fBappend_db_time\fP, \fBmaxchunk\fP,
+\fBworktime\fP and \fBdb_group\fP are used if the same parameters in some
+\fBrule\fP section are omitted.
+.PP
+The \fBdb_dir\fP parameter allows to change default database directory
+\fB/var/ipa\fP.
+.PP
+Format for the \fBdb_dir\fP parameter is:
+.PP
+	db_dir = <directory>
+.PP
+<Directory> should be given with absolute pathname (i.e. starts with the `/'
+character).
+.PP
+Normally there are two programs which can simultaneously access the database.
+These programs are \fBipa\fP(8) and \fBipastat\fP(8). By default \fBipa\fP(8)
+does not lock any file it modifies and \fBipastat\fP(8) does not lock
+any file it accesses.
+.PP
+The \fBlock_db\fP parameter allows to change default behaviour of \fBipa\fP(8).
+It has following format:
+.PP
+	lock_db = <boolean>
+.PP
+<boolean> can be "\fByes\fP" or "\fBno\fP". Default value is "\fBno\fP".
+If you specify "\fByes\fP", then \fBipa\fP(8) will lock whole database
+(will lock the \fBlock\ db\fP file in the main database directory)
+after its start or after rereading the configuration file and will lock
+records in database files when it will update them. \fBipastat\fP(8) will
+try to obtain lock on whole database and needed files if it runs with the
+\fB-L\fP switch in its command line. If it cannot obtain lock during
+10 seconds, it outputs warning message and reads nothing.
+.PP
+Probably you do not want to enable database locking feature if you do not
+use the \fBipastat\fP(8) program or if you want to prevent some malicious
+user, who can lock some file in the database (of course this user should
+belong to group which is allowed to access some rule).
+.PP
+\fINOTE\fP: if you do not use database locking feature, then \fBipastat\fP(8)
+sometimes can give an error message about incorrect format of database files,
+it means that \fBipastat\fP(8) read half updated database file.
+.PP
+By default \fBipa\fP(8) waits for locking 5 seconds (if locking feature is
+enabled). You can change this with the \fBlock_wait_time\fP parameter:
+.PP
+	lock_wait_time = <time>
+.PP
+If \fBipa\fP(8) cannot obtain lock during \fBlock_wait_time\fP seconds, then it
+logs a warning message and skips file locking.
+.PP
+By default \fBipa\fP(8) only accepts commands given in \fBexec\fP parameters
+with absolute paths. The \fBonly_abs_path\fP or \fBonly_abs_paths\fP parameter
+allows to change this.
+.PP
+Format for the \fBonly_abs_paths\fP parameter is:
+.PP
+	only_abs_paths = <boolean>
+.PP
+If you want to allow usage of commands given without absolute paths, you should
+set this parameter to "\fBno\fP". \fINOTE\fP: \fBipa\fP(8) parses the
+configuration file from the first line to the last one, and you should place
+the \fBglobal\fP section before any \fBrule\fP section, if you want to use the
+\fBonly_abs_paths\fP parameter.
+.PP
+Example of the \fBglobal\fP section:
+.PP
+	global {
+.br
+	    maxchunk = 10M
+.br
+	    update_db_time = 30s
+.br
+	    db_group = ipacct
+.br
+	    db_dir = /var/db/ipa
+.br
+	    lock_wait_time = 20s
+.br
+	}
+.PP
+Let's check this example. \fBmaxchunk\fP is equal to 10\ Mbytes and
+\fBupdate_db_time\fP is equal to 30 seconds. \fBmaxchunk\fP /
+\fBupdate_db_time\fP is equal to 2,7\ Mbit/s. It is normal value for serial link
+with speeds 115\ kbit/s, but not enough for 10\ Mbit Ethernet. Default database
+directory is changed and will be created by \fBipa\fP(8) if it does not exist.
+.PP
+The \fBinfo\fP parameter in the \fBrule\fP section allows to give a description
+for the rule. If this description is specified, then it will be output
+by the \fBipastat\fP(8) program.
+.PP
+Format for the \fBinfo\fP parameter is:
+.PP
+	info = <string>
+.PP
+<String> is non-empty sequence of characters.
+.PP
+Example:
+.PP
+	info = Summary traffic to ISP
+.br
+	info = Outgoing traffic for user simon
+.PP
+Following some sections allow to run commands if a counter of some rule
+reaches specified value, but not only this.
+.PP
+Values of the counter of some rule can be checked in the \fBlimit\fP section.
+.PP
+The \fBlimit\fP section has following format:
+.PP
+	limit <name-of-limit> {
+.br
+	# parameters and other sections
+.br
+	}
+.PP
+<name-of-limit> is a string without white-space characters, `{', `}', `#'
+and `;' characters. You should give such
+name for the limit which is also a valid name for the directory for your
+operating/file system, because each limit is represented as a directory in the
+database.
+.PP
+The \fBlimit\fP section should be placed in the \fBrule\fP section. There are
+can be some \fBlimit\fP sections in one \fBrule\fP section, but all \fBlimit\fP
+sections must be named. The name of the limit allows to safely remove and add
+\fBlimit\fP sections in the \fBrule\fP section (limit sections are distinguished
+by names, not by order as they are placed). The \fBlimit\fP section should have
+at least the \fBbyte_limit\fP or \fBbytes_limit\fP parameter.
+.PP
+The \fBbyte_limit\fP parameter in the \fBlimit\fP section determines number of
+bytes when limit is treated as reached.
+.PP
+Format for the \fBbyte_limit\fP parameter is:
+.PP
+	byte_limit = <size>
+.PP
+Where the format for <size> is the same as for the \fBmaxchunk\fP parameter. Current
+values of limit counters are stored in the database and are used when \fBipa\fP(8)
+starts working and can be viewed by the \fBipastat\fP(8) program. \fINOTE\fP:
+limit counters are updated with the interval in \fBupdate_db_time\fP seconds.
+.PP
+The \fBlimit\fP section can have \fBinfo\fP and \fBworktime\fP parameters, which
+mean the same as the same parameters in the \fBrule\fP section. If the
+\fBworktime\fP parameter is omitted, then the same parameter from the \fBrule\fP
+section is used. If that parameter is also omitted, then the same parameter from
+the \fBglobal\fP section is used. If that parameter is also omitted, then this
+limit is valid for all days. \fINOTE\fP: a value of the \fBworktime\fP parameter
+in the \fBlimit\fP section is not required to be the same as in the \fBrule\fP
+section, usually a value of the \fBworktime\fP in the \fBlimit\fP section is a
+subset of the value of the same parameter in the \fBrule\fP section.
+.PP
+The \fBworktime\fP parameter in the \fBlimit\fP section means, that
+byte counter for the limit should be calculated only for given time periods.
+This parameter affects on the \fBzero_time\fP and \fBexpire_time\fP
+parameters, that is, if accounting for the limit is not allowed, then time when
+the limit should be zeroed or should be expired is ignored, until the limit
+becomes active again. If the \fBworktime\fP in the \fBrule\fP section does not
+allow accounting for some time period, then the \fBworktime\fP parameter in
+the \fBlimit\fP section is ignored.
+.PP
+Current value of the limit byte counter can be zeroed. I.e. you can specify
+time when the limit becomes stale. For this you can use the \fBzero_time\fP
+parameter in the \fBlimit\fP section.
+.PP
+Format for the \fBzero_time\fP parameter is:
+.PP
+	zero_time = [+<X>] <time2>
+.br
+	zero_time = <time2> [+<X>]
+.PP
+The \fBzero_time\fP parameter in the \fBlimit\fP section determines number of
+seconds when the limit counter will be zeroed. A value of this parameter is added to
+time when the limit counter was started. The format for <time2> is almost the same
+as for <time>. As in <time> the `\fBs\fP' character means seconds, `\fBm\fP' -
+minutes, `\fBh\fP' - hours. There are some extra characters: the `\fBd\fP' or
+`\fBD\fP' character means days, `\fBw\fP' or `\fBW\fP' - weeks (7 days),
+`\fBM\fP' - months (\fINOTE\fP: `\fBm\fP' and `\fBM\fP' are not the same). If
+<time2> is specified as a complex value, then months should be placed before
+weeks, days, hours, minutes, seconds and so on.
+.PP
+Valid values for <X> are: `\fBm\fP', `\fBh\fP', `\fBd\fP', `\fBD\fP',
+`\fBw\fP', `\fBW\fP', `\fBM\fP'. Look at the following example for
+understanding their meaning.
+.PP
+Example:
+.PP
+	zero_time = 1d 20h
+.br
+	zero_time = 1M 30d
+.br
+	zero_time = +W
+.br
+	zero_time = 1w 10h +M
+.br
+	zero_time = +M 1w 10h
+.PP
+The first example specifies that the limit counter should be zeroed after 1 day
+and 20 hours from its start. The second example specifies that the limit
+counter should be zeroed after 1 month and 30 days from its start. 30 days
+are added to time when the limit counter was started and then 1 month is "added".
+For example, if <start> + 30\ days = 10\ Jan\ 2000,
+then <start> + 30\ days + 1\ month = 10\ Feb\ 2000; if <start> + 30\ days = 31\ Jan\ 1999,
+then <start> + 30\ days + 1\ month = 28\ Feb\ 1999 (i.e. can be not the same day
+number). The third example specifies that the limit counter should be zeroed at
+the end of the week when it was started. The fourth example is more complex. 1
+week (7 days) and 10 hours are added to time when the limit
+was started, then the limit counter should be zeroed at the end of the month of
+received date. The fifth example specifies that the limit counter should be
+zeroed after 1 week and 10 hours after the end of the current month. \fINOTE\fP:
+fourth and fifth examples are not the same and give different results.
+.PP
+\fINOTE\fP: a first day of a week is Monday.
+.PP
+If the limit counter reaches the \fBbyte_limit\fP value, then \fBipa\fP(8) logs a message about
+this event to the syslog if value of the \fBdebug_limit\fP parameter is greater
+than 0 and next its behaviour depends on following parameters and sections.
+.PP
+You can specify commands which will be run when the limit counter reaches the
+\fBbyte_limit\fP value in the \fBreach\fP section. The \fBreach\fP section can
+be placed only in the \fBlimit\fP section and can have only one type of
+parameters: \fBexec\fP.
+.PP
+Format for the \fBexec\fP parameter is:
+.PP
+	exec = <command-string>
+.br
+	exec(<user>) = <command-string>
+.br
+	exec(<user>:) = <command-string>
+.br
+	exec(<user>:<group>) = <command-string>
+.br
+	exec(:<group>) = <command-string>
+.PP
+Let's look at the example:
+.PP
+	0. exec = /some/command
+.br
+	1. exec(simon) = /some/command
+.br
+	2. exec(simon:nobody) = /some/command
+.br
+	3. exec(1000) = /some/command
+.br
+	4. exec(simon:1001) = /some/command
+.br
+	5. exec(:nobody) = /some/command
+.br
+	6. exec(1234:) = /some/command
+.br
+	7. exec(:9876) = /some/command
+.br
+	8. exec(1234:9876) = /some/command
+.PP
+"simon" is a valid user name with  UID 1000.
+"nobody" is a valid group name with GID 1001.
+"1234" is not a valid user name and there is not any user with such UID
+in the /etc/passwd file.
+"9876" is not a valid group name and there is not any group with such GID
+in the /etc/group file.
+.PP
+0. A command is executed with privileges of the super-user and normally with
+privileges of the default super-user's group, super-user's supplementary groups.
+.PP
+1. A command is executed with privileges of the user "simon" and with privileges
+of the default simon's group, simon's supplementary groups.
+.PP
+2. Like the 1st example, but extra group "nobody" is added. A command is
+executed with privileges of the user "simon" and with privileges of the
+group "nobody", the simon's default group, simon's supplementary groups
+(actually the simon's default group and simon's supplementary groups become
+supplementary groups for a new process). So, here some extra access rights
+are granted to the user "simon" (extra rights are the "nobody" group rights).
+.PP
+3. The same as the 1st example, because UID of the user "simon" is equal to
+1000. But you should to use a user name instead, if you mean some real user in
+the /etc/passwd file.
+.PP
+4. The same as the 2nd example, because GID of the group "nobody" is equal to
+1001. But you should to use a group name instead, if you mean some real group
+in the /etc/group file.
+.PP
+5. A command is executed with privileges of the super-user (the user who
+can only run \fBipa\fP(8)) and with privileges of the group "nobody", the
+super-user's default group and super-user's supplementary groups.
+.PP
+6. A command is executed with privileges of the user with UID 1234 and
+normally with privileges of the default super-user's group,
+super-user 's supplementary groups.
+.PP
+7. Like the 5th example, but the group is given with GID 9876.
+.PP
+8. A command is executed with privileges of the user with UID 1234 and with
+privileges of the group with GID 9876.
+.PP
+\fINOTE\fP: parameters like exec(1234), where 1234 is not a valid user name and
+there is not any user with such UID in the /etc/passwd file, are prohibited,
+because \fBipa\fP(8) does not know what to do with supplementary groups.
+\fINOTE\fP: do not use exec(<user>:) parameters which inherits supplementary
+GIDs of the running copy of \fBipa\fP(8), until you completely understand for
+what you do and why you should do this.
+.PP
+\fINOTE\fP: sometimes the word "normally" is used in above listed examples.
+\fBipa\fP(8) can be run only by the super-user, but the group of the running
+copy of \fBipa\fP(8) is not required to be equal to the default
+super-user's group.
+.PP
+<Command-string> is a non-empty sequence of characters. Each <command-string> is
+executed by the system(3) function, so shell pipelines, redirections, etc. are valid.
+By default \fBipa\fP(8) only accepts commands given with absolute paths. If you
+do not like this and want to use a command, which the command interpreter \fBsh\fP(1)
+will find for you based on the shell \fB$PATH\fP variable (\fBsh\fP(1) is called
+from the system(3) function), you should set the \fBonly_abs_paths\fP parameter to
+"\fBno\fP" in the \fBglobal\fP section. \fINOTE\fP: it is not recommended to
+set the \fBonly_abs_paths\fP parameter to "\fBno\fP", because the \fB$PATH\fP
+variable is not a good thing for the security.
+.PP
+When a command in some \fBexec\fP parameter is run, \fBipa\fP(8) redirects
+standard input (stdin), standard output (stdout) and standard error (stderr)
+to /dev/null, but you still can use shell redirection operations (e.g. ">",
+">>", "<", "<<", etc.).
+.PP
+There can be some \fBexec\fP parameters in the \fBreach\fP section, it means
+a sequence of commands. All commands are executed by a child of \fBipa\fP(8),
+i.e. \fBipa\fP(8) executes them in background. If \fBipa\fP(8) started some
+commands in the background mode, it checks termination of its child and only after
+this event continues work with the appropriate limit. If you specified some program,
+execution of which takes some time (some minutes, hours, etc.), then the
+\fBipastat\fP(8) program will output this information. \fINOTE\fP: if you think
+that \fBipa\fP(8) runs your commands incorrectly or does not work properly, please
+check output of \fBipastat\fP(8) and verify if your commands were terminated
+(use \fB-r\fP and \fB-l\fP options).
+.PP
+Example:
+.PP
+	reach {
+.br
+	    exec = /sbin/ipfw \\
+.br
+		add 100 deny all from 10.1.1.1 to 10.123.1.2
+.br
+	    exec = /sbin/ipfw \\
+.br
+		add 101 deny all from 10.1.1.1 to 10.123.1.3
+.br
+	}
+.PP
+It is possible to specify time when reached limit can be considered as expired.
+The \fBexpire\fP section in the \fBlimit\fP section can be used for this.
+The \fBexpire\fP section should have at least one parameter. The
+\fBexpire_time\fP parameter in the \fBexpire\fP section determines time when
+the limit can be considered as expired and must be restarted. The
+\fBexpire_time\fP parameter in the \fBexpire\fP section has the same format as
+the \fBzero_time\fP parameter in the \fBlimit\fP section. It is possible to
+specify command(s), which will be run when the limit will expire in the
+\fBexec\fP parameter(s).
+.PP
+Example:
+.PP
+	expire {
+.br
+	    expire_time = +w
+.br
+	    exec = /sbin/ipfw del 100
+.br
+	}
+.PP
+Similarly with \fBexec\fP parameters in the \fBreach\fP section, \fBexec\fP
+parameters in the \fBexpire\fP section are executed in background. All
+remarks for \fBexec\fP parameters in the \fBreach\fP section are valid for
+\fBexec\fP parameters in the \fBexpire\fP section.
+.PP
+The \fBexec\fP parameter in \fBreach\fP and \fBexpire\fP sections can be
+omitted. It is not an error and \fBipa\fP(8) will just stop and restart the limit,
+but probably you want to make some actions when the limit reaches some value or
+expires.
+.PP
+It is possible to use the \fBlimit\fP section to control average bandwidth.
+Suppose we want to control average bandwidth in 10\ kbyte/s for some set of
+IPFW/IPF/PF rules. One way to do it is following: set
+\fBbyte_limit\fP to 1000k and set \fBzero_time\fP to 100s.
+\fBbyte_limit\fP\ /\ \fBzero_time\fP
+is equal to 10\ kbytes/s. Also we should setup commands in \fBreach\fP
+and \fBexpire\fP sections to actually do something when average bandwidth
+will be greater than 10\ kbytes/s. Note that we do not set \fBbyte_limit\fP to
+10k and \fBzero_time\fP to 1s, because we want to control average bandwidth
+during longest time period than just one second and allow someone
+to use bandwidth greater than just 10\ kbytes/s.
+.PP
+\fBlimit\fP sections work as it was described before only when \fBipa\fP(8) is
+running. When \fBipa\fP(8) starts working or finds unsuccessive date or time
+changes and limits already have their accounting files it does not work in the
+same way.
+.PP
+If \fBipa\fP(8) starts and finds out that accounting file for some limit
+is already exists, then:
+.PP
+1. If some limit is not reached with old value of the \fBbyte_limit\fP parameter,
+then \fBipa\fP(8) modifies old value of \fBbyte_limit\fP in the accounting
+file for this limit, if old value is not equal to current one; recalculates and
+updates time when this limit should be zeroed if \fBzero_time\fP parameter is
+specified for this limit; if just updated time when this limit should be zeroed
+is less than current time, then \fBipa\fP(8) restarts this limit.
+.PP
+2. If some limit is reached with old value of the \fBbyte_limit\fP parameter,
+then if old expire time is less then current time, then \fBipa\fP(8) restarts
+this limit; then \fBipa\fP(8) updates expire time based on current value of
+the \fBexpire_time\fP parameter, if it is specified for this limit; if just
+updated expire time is less then current time, then \fBipa\fP(8) restarts
+this limit.
+.PP
+When \fBipa\fP(8) finds unsuccessive date or time changes, it makes the same
+steps of limits checking, but does not restart limit. It allows to run commands
+in the \fBexpire\fP section if \fBexec\fP parameters are used.
+.PP
+The \fBstartup\fP and \fBshutdown\fP sections are implemented for running
+some commands during starting and shutdowning of \fBipa\fP(8). They can
+contain only one type of parameters: \fBexec\fP.
+.PP
+In the \fBstartup\fP section you can specify which commands should be run when
+\fBipa\fP(8) starts working. Similarly in the \fBshutdown\fP section
+you can specify which commands should be run when \fBipa\fP(8) is
+going to stop itself.
+.PP
+Example:
+.PP
+	startup {
+.br
+	    exec = /sbin/ipfw add 100 allow all\\
+.br
+	              from 10.1.2.3 to any
+.br
+	    exec = /some-path/set-ipfil-rules
+.br
+	    exec(simon) = /home/dir/simon/some-user-program
+.br
+	}
+.br
+	shutdown {
+.br
+	    exec = /sbin/ipfw add 90 deny all\\
+.br
+	              from 10.1.2.3 to any
+.br
+	    exec = /some-path/block-ipfil-rules
+.br
+	}
+.PP
+The \fBstartup\fP and \fBshutdown\fP sections can be placed alone (like
+the \fBglobal\fP and \fBrule\fP sections), can be included to \fBrule\fP and
+\fBlimit\fP sections. But there is one difference. \fBexec\fP parameters from
+the \fBstartup\fP section not included in any any other sections are executed
+first. Then \fBipa\fP(8) executes \fBexec\fP parameters from the \fBstartup\fP
+section included in the \fBrule\fP section. And only then \fBipa\fP(8) executes
+\fBexec\fP parameters from the \fBlimit\fP section. \fINOTE\fP: \fBipa\fP(8)
+works with section and limits in order as they are placed in the configuration file.
+\fBexec\fP parameters from \fBshutdown\fP sections are executed in reverse
+order: first \fBipa\fP(8) executes parameters from the \fBshutdown\fP section
+in the \fBrule\fP section, then in the \fBlimit\fP section and only then from
+the \fBshutdown\fP section stands alone.
+.PP
+The \fBstartup\fP and \fBshutdown\fP sections included in the \fBrule\fP
+and \fBlimit\fP section can have extra sections: \fBif_limit_is_reached\fP and
+\fBif_limit_is_not_reached\fP. The \fBif_limit_is_reached\fP and
+\fBif_limit_is_not_reached\fP sections can have only one type of parameters:
+\fBexec\fP. There are short forms of these sections they are: \fBif_limit\fP,
+\fBif_limit_reached\fP, and \fBif_nolimit\fP, \fBif_limit_not_reached\fP.
+.PP
+The \fBif_limit_is_reached\fP section determines which commands should be run
+if the appropriate limit is reached during startup or shutdown (depends on the type
+of top section). The \fBif_limit_is_not_reached\fP section determines which
+commands should be run if the appropriate limit is not reached during startup or
+shutdown (depends on the type of a top section). If the top section \fBstartup\fP or
+\fBshutdown\fP is placed in the \fBrule\fP section, then a "limit" is considered
+as "any of limits". If the top section \fBstartup\fP or \fBshutdown\fP is placed
+in the \fBlimit\fP section, then a "limit" is considered as a "limit of current
+limit section". 
+.PP
+\fINOTE\fP: all commands listed in \fBexec\fP parameters in \fBstartup\fP and
+\fBshutdown\fP sections are executed in foreground (in the same process), all
+commands listed in \fBexec\fP parameters in \fBreach\fP and \fBexpire\fP
+sections are executed in background (in a child process).
+.PP
+The \fBdebug\fP section allows to debug your configuration file and \fBipa\fP(8).
+This section consists only of parameters. It is possible to specify some
+debug regimes and their levels.
+.PP
+Format for the \fBdebug\fP section is:
+.PP
+	debug {
+.br
+	    debug_ipfw = <level>
+.br
+	    debug_ip6fw = <level>
+.br
+	    debug_ipfil = <level>
+.br
+	    debug_pf = <level>
+.br
+	    debug_exec = <level>
+.br
+	    debug_limit = <level>
+.br
+	    debug_time = <level>
+.br
+	    debug_worktime = <level>
+.br
+	    debug_lock = <level>
+.br
+	    debug_include = <level>
+.br
+	}
+.PP
+By default <level>s for all regimes, except the \fBdebug_include\fP parameter,
+are equal to 0, it means that debugging is not used.
+\fBdebug_ipfw\fP or \fBdebug_ip4fw\fP is used for debugging FreeBSD IP Firewall,
+\fBdebug_ip6fw\fP is used for debugging FreeBSD IPv6 Firewall, \fBdebug_ipfil\fP
+is used for debugging IP Filter, \fBdebug_pf\fP is used for debugging OpenBSD
+Packet Filter, \fBdebug_exec\fP is used for debugging \fBexec\fP parameters,
+\fBdebug_limit\fP is used for debugging \fBlimit\fP and \fBexpire\fP
+sections, \fBdebug_time\fP is used for debugging different time intervals,
+\fBdebug_worktime\fP is used for debugging \fBworktime\fP parameters,
+\fBdebug_lock\fP is used for debugging the database locking feature.
+\fBdebug_include\fP is used for logging information to syslogd(8) about files
+and directories included by \fBipa\fP(8) (read description of the \fBinclude\fP
+section below). To get more debugging information you should set <level> to
+bigger value (max debug level is equal to 3).
+.PP
+The level of the \fBdebug_include\fP parameter by default is equal to 1, what
+means, that \fBipa\fP(8) should log all included files and directories, if you
+want to see also not included files and directories (for example, those files
+in directories, which do not match the appropriate regular expressions), you should
+set the level for this parameter to 2. To stop logging information about
+included files and directories, set the level for the \fBdebug_include\fP
+parameter to 0. \fINOTE\fP: when a configuration files are checked by the
+\fBipa\fP(8) with switches \fB-tt\fP, then \fBipa\fP(8) always outputs all
+information about included and not included files and directories.
+.PP
+The \fBinclude\fP section allows one to keep configuration information in
+some files.
+.PP
+Format for the \fBinclude\fP section is:
+.PP
+	include {
+.br
+	    file = <file>
+.br
+	    file(?) = <file>
+.br
+	    files(<directory>) = <regular-expression>
+.br
+	    files(?)(<directory>) = <regular-expression>
+.br
+	}
+.PP
+The \fBfile\fP parameter allows to include one file. If the "\fB(?)\fP"
+characters are used after the \fBfile\fP parameter and <file> is not present in
+the file system, then \fBipa\fP(8) will not panic about it, skip it and
+continue to parse current configuration file.
+.PP
+The \fBfiles\fP parameter allows to include some files from the <directory> and
+each included file should match <regular-expression>. <regular-expression>
+is not a shell pattern, it should have the POSIX regular expressions format
+\fBre_format\fP(7). If the "\fB(?)\fP" characters are used after the \fBfiles\fP
+parameter and <directory> is not present in the file system, then \fBipa\fP(8)
+will not panic about it, skip this <directory> and continue to parse current
+configuration file.
+.PP
+\fBinclude\fP sections can be placed in some configuration files, but
+each next \fBfile\fP or \fBfiles\fP parameter will determine file(s) which
+will be included after including all previous files.
+.PP
+Each included configuration file should be correct for parsing. It is not
+possible to start something in one file and continue it on another one.
+.PP
+Example:
+.PP
+	include {
+.br
+	    file = /usr/local/etc/ipa/myaccout
+.br
+	    file(?) = /usr/local/etc/ipa/mytestaccount
+.br
+	    files(/usr/local/etc/ipa/192.168.0) = .
+.br
+	    files(/usr/local/etc/ipa/10.1) = ^(2|11)\\.*
+.br
+	    files(?)(/usr/local/etc/ipa/testconfig) = \\.conf$
+.br
+	}
+.PP
+The first \fBfile\fP parameter tells \fBipa\fP(8) to include one file named
+/usr/local/etc/ipa/myaccout. The second \fBfile\fP parameter also tells to
+include one file, but if the /usr/local/etc/ipa/mytestaccount file is not
+present in the file system, then \fBipa\fP(8) will ignore it.
+.PP
+The first \fBfiles\fP parameter "includes" all files from the
+/usr/local/etc/ipa/192.168.0 directory. The second \fBfiles\fP parameter
+"includes" all files matched given POSIX regular expression from the
+/usr/local/etc/ipa/10.1 directory. And the last \fBfiles\fP parameter "includes"
+all files with ".conf" suffix from the /usr/local/etc/ipa/testconfig directory,
+but if this directory is not present in the file system, then \fBipa\fP(8)
+will ignore it and continue to work.
+.PP
+\fBipa\fP(8) makes the same checks for all included files, as for the default
+configuration file. Also directories in \fBfiles\fP parameters should be
+owned by the super-user and do not have write permissions for group and
+other users.
+.PP
+When \fBipa\fP(8) is run with the \fB-tt\fP switches it includes all
+configuration files from the \fBinclude\fP section(s) and check them as one
+configuration file. In this case \fBipa\fP(8) also outputs all information
+about included and not included files and directories in comments. Where:
+.PP
+\fB[+]\fP\ -\ the file has been included;
+.br
+\fB[n]\fP\ -\ the file does not exist and the "\fB(?)\fP" characters are used
+after the appropriate \fBfile\fP parameter;
+.br
+\fB<+>\fP\ -\ the directory exists and \fBipa\fP(8) will scan it;
+.br
+\fB<n>\fP\ -\ the directory does not exist and the "\fB(?)\fP" characters are used
+after the appropriate \fBfiles\fP parameter;
+.br
+\fB[!]\fP\ -\ the name of the file does not match to the regular expression in
+the appropriate \fBfiles\fP parameter;
+.br
+\fB[i]\fP\ -\ the file has been already included (check your configuration,
+you include the same file two or more times).
+.PP
+\fBipa\fP(8) can reread its configuration file. But not all changes
+have effect. \fBipa\fP(8) does not run any commands in \fBstartup\fP sections,
+but \fBshutdown\fP sections can be modified and new values will have effect.
+.SH EXAMPLES
+Look at the directory ${PREFIX}/share/examples/ipa/ for examples.
+.SH TEMPLATE
+This is the template for the configuration file. It is not an example,
+but can help understand what and where should be placed.
+.PP
+global {
+.br
+    update_db_time = <time>
+.br
+    append_db_time = <time>
+.br
+    maxchunk = <size>
+.br
+    db_dir = <path>
+.br
+    db_group = <group>
+.br
+    worktime = <time-interval>
+.br
+    lock_db = <boolean>
+.br
+    lock_wait_time = <time>
+.br
+    only_abs_paths = <boolean>
+.br
+}
+.PP
+debug {
+.br
+    debug_ipfw = <level>
+.br
+    debug_ip6fw = <level>
+.br
+    debug_ipfil = <level>
+.br
+    debug_pf = <level>
+.br
+    debug_exec = <level>
+.br
+    debug_limit = <level>
+.br
+    debug_time = <level>
+.br
+    debug_worktime = <level>
+.br
+    debug_lock = <level>
+.br
+    debug_include = <level>
+.br
+}
+.PP
+include {
+.br
+    file = <file>
+.br
+    file(?) = <file>
+.br
+    files(<directory>) = <regular-expression>
+.br
+    files(?)(<directory>) = <regular-expression>
+.br
+}
+.PP
+startup {
+.br
+    exec = <command-string>
+.br
+    exec(<owner>) = <command-string>
+.br
+}
+.PP
+shutdown {
+.br
+    exec = <command-string>
+.br
+    exec(<owner>) = <command-string>
+.br
+}
+.PP
+rule <rule-name> {
+.br
+    ipfw = <ipfw-rules-list>
+.br
+    ip6fw = <ip6fw-rules-list>
+.br
+    ipfil = <ipfil-rules-list>
+.br
+    pf = <pf-rules-list>
+.br
+    update_db_time = <time>
+.br
+    append_db_time = <time>
+.br
+    info = <string>
+.br
+    db_group = <group>
+.br
+    maxchunk = <size>
+.br
+    worktime = <time-interval>
+.br
+    startup {
+.br
+        exec = <command-string>
+.br
+        exec(<owner>) = <command-string>
+.br
+        if_limit_is_reached {
+.br
+            exec = <command-string>
+.br
+            exec(<owner>) = <command-string>
+.br
+        }
+.br
+        if_limit_is_not_reached {
+.br
+            exec = <command-string>
+.br
+            exec(<owner>) = <command-string>
+.br
+        }
+.br
+    }
+.br
+    shutdown {
+.br
+        exec = <command-string>
+.br
+        exec(<owner>) = <command-string>
+.br
+        if_limit_is_reached {
+.br
+            exec = <command-string>
+.br
+            exec(<owner>) = <command-string>
+.br
+        }
+.br
+        if_limit_is_not_reached {
+.br
+            exec = <command-string>
+.br
+            exec(<owner>) = <command-string>
+.br
+        }
+.br
+    }
+.br
+    limit <limit-name> {
+.br
+        byte_limit = <size>
+.br
+        zero_time = [+<X>] [<time2>]
+.br
+        zero_time = [<time2>] [+<X>]
+.br
+        info = <string>
+.br
+        worktime = <time-interval>
+.br
+        reach {
+.br
+            exec = <command-string>
+.br
+            exec(<owner>) = <command-string>
+.br
+        }
+.br
+        expire {
+.br
+            expire_time = [+<X>] [<time2>]
+.br
+            expire_time = [<time2>] [+<X>]
+.br
+            exec = <command-string>
+.br
+            exec(<owner>) = <command-string>
+.br
+        }
+.br
+        startup {
+.br
+            exec = <command-string>
+.br
+            exec(<owner>) = <command-string>
+.br
+            if_limit_is_reached {
+.br
+                exec = <command-string>
+.br
+                exec(<owner>) = <command-string>
+.br
+            }
+.br
+            if_limit_is_not_reached {
+.br
+                exec = <command-string>
+.br
+                exec(<owner>) = <command-string>
+.br
+            }
+.br
+        }
+.br
+        shutdown {
+.br
+            exec = <command-string>
+.br
+            exec(<owner>) = <command-string>
+.br
+            if_limit_is_reached {
+.br
+                exec = <command-string>
+.br
+                exec(<owner>) = <command-string>
+.br
+            }
+.br
+            if_limit_is_not_reached {
+.br
+                exec = <command-string>
+.br
+                exec(<owner>) = <command-string>
+.br
+            }
+.br
+        }
+.br
+    }
+.br
+#   ... other "limit" sections.
+.br
+}
+.br
+# ... other "rule" sections.
+.SH FILES
+/usr/local/etc/ipa.conf
+.br
+${PREFIX}/etc/ipa.conf.default
+.br
+${PREFIX}/share/examples/ipa/
+.PP
+(by default ${PREFIX} is /usr/local)
+.SH SEE ALSO
+ipa(8), ipa(5), ipastat(8), ipf(1), ipf(5), ipfstat(8), ipfw(8), ip6fw(8),
+pf.conf(5), pfctl(8)
+.SH AUTHOR
+Andrey\ Simonenko\ <simon@comsys.ntu-kpi.kiev.ua>
+.SH BUGS
+If you find any, please send email me.

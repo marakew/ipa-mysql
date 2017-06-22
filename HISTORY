@@ -1,0 +1,238 @@
+1.3.6	11/11/2003	released
+- Fixed bug: ipa incorrectly worked when some IPFW/IP6FW/IPF/PF
+  rule overflowed and this rule is not the first by order in the
+  corresponding parameter (in "ipa -t" output), it calculated more
+  bytes than actually should be calculated
+- Fixed two bugs: ipa sometime incorrectly did accounting for limits
+  if statistics was subtracted in some rule
+- Fixed bug: limit's start_time could be yyyy.mm.dd/24:00:00
+  in the database, mktime(3) on tested systems understands such
+  local time and transforms it to next_day/00:00:00, now start_time
+  can't be 24:00:00 any more and always is next_day/00:00:00.
+- Fixed bug: if new_local_time - old_local_time > one_day (for
+  example as the result of date of ntpdate commands usage), then
+  ipa thought that a new day came, now it tries to find out if
+  local time is changed too quickly
+
+1.3.5	08/07/2003	released
+- Serious bug with worktime parameter implementation was fixed
+- Now ipa removes created PID-file when exits
+- Not it is possible to use OpenBSD PF on not OpenBSD (see the INSTALL file)
+- Added a new parameter "debug_worktime"
+- Some fixes for code that runs commands
+
+1.3.4	29/05/2003	released
+- Added support for PF from OpenBSD 3.3
+- Minor changes
+
+1.3.3	17/04/2003	released
+- Fixed two bugs in ipa), which caused core dumps: if there were one or
+  some `\t' characters after the "rule" or "limit" keyword in ipa.conf,
+  then ipa wasn't able to parse such configuration file
+- File /var/ipa/## lock ## was renamed to /var/ipa/lock db, because
+  BSD daily script deletes files with `#' characters.  All should remove
+  the /var/ipa/## lock ## file
+- Minor improvements and changes
+
+1.3.2	27/03/2003	released
+- Some bugs in IP Filter support code were found and fixed, whole code,
+  which works with IP Filter, was rewritten and now has a new design,
+  which is much simpler for supporting and faster than previous one
+- Fixed bug with the global "shutdown" section: when ipa receives
+  the HUP signal, it destroyed information about commands in the global
+  "shutdown" section
+- Some bugs with memory usage were fixed: ipa and ipastat could
+  free not allocated chunks of memory
+- Fixed several minor bugs in IPv4/v6 Firewall and Packet Filter
+  support code
+
+1.3.1	24/02/2003	released
+- Some improvements for ipa were implemented, as a result ipa
+  now uses less CPU time when works with many rules and with many limits
+- Fixed incorrectly rounded Kbytes, Mbytes, Gbytes and Tbytes in
+  output of ipastat
+- Fixed some minor bugs in ipa
+
+1.3	04/01/2003	released
+- Now the "worktime" parameter is completely supported
+- Now IPA can be downloaded from http://ipa-system.sourceforge.net/
+- Some bugs with "limit" sections were fixed
+- One bug and memory leak with the "db_dir" parameter were fixed
+
+1.2.9	28/10/2002	released
+- Fixed support for 32-bits IP Filter v3.4.x rule group numbers (previous
+  incorrect implementation was introduced in IPA-1.1.3)
+- Now it is possible to remove not needed accounting systems support
+  with the help of -DWITHOUT_{IPFW|IP6FW|IPFIL|PF} options
+- Now FreeBSD IPFW2 is supported
+- "getsockopt(IPV6_FW_GET): Invalid argument" IPv6 Firewall bug was fixed
+- Minor improvements for IPv4/v6 Firewall support
+
+1.2.8	27/09/2002	released
+- Locale names have been renamed ru_SU* -> ru_RU*, ru_SU* now are symlinks
+- Fixed some minor bugs
+- Now a new record is added to each accounting file after reconfiguration
+- Now ipa and ipastat do not use database locking feature by default
+- All manual pages were updated to reflect changes in IPA
+- The -u switch was removed from and the -L switch was added to ipastat
+- All code of ipa was revised, now ipa tests directories and
+  files in the database more carefully
+- Several bugs and memory leak with the "db_dir" parameter were fixed
+- Added new parameter "db_group"
+- Parameters "acl", "db_owner", "db_perm" have been removed
+
+1.2.7	30/06/2002	released
+- SECURITY PROBLEM: I removed SUID bit from ipastat due to security
+  problems, and don't even try to set it back.
+  Admins who use the "db_owner" parameter *and* use some safe user/group,
+  *and* didn't forget to set the same safe user/group for the ipastat
+  program, as it was said in the SECURITY NOTE on the ipastat(8) manual page,
+  should not worry a lot. Admins, who ignored that SECURITY NOTE, should double
+  check security of their systems and change all passwords, secrets keys, etc.,
+  if you think that somebody cracked your systems by ipastat.
+  I'm sorry about this sad program mistake.
+- Now ipl.h, ip_fil.h, ip_compat.h (and ip_fil_compat.h) files are
+  searched by the gensysinfo script in /usr/include, /usr/src/sys/netinet,
+  /usr/src/sys/contrib/ipfilter/netinet directories
+
+1.2.6	19/06/2002	released
+- Now '{', '}', '#' and ';' characters are not allowed for naming
+  rules and limits
+- Fixed bug in ipa: when ipa parsed "rule" and "limit" sections,
+  it accessed not allocated memory (this bug was introduced in IPA-1.2.1),
+  also remove some memory leaks
+- Fixed bug in ipa: if the "include" section was used, then
+  ipa could free not allocated chunk of memory and also could access
+  to not allocated memory
+- Fixed some similar bugs in ipa: some functions return 0 instead
+  of -1 to indicate an error
+
+1.2.5	03/04/2002	released
+- Added new switch to ipastat: -x, treat rule names as POSIX
+  regular expressions
+- Fixed incorrect parsing of debug_* parameters arguments
+
+1.2.4	10/03/2002	released
+- Added new switch to ipastat: -p <time-back>
+- Fixed incorrect usage of functions in async signal handlers: usage of
+  some functions in async signal handlers is not allowed by POSIX
+  (async-signal-safe functions)
+
+1.2.3	30/01/2002	released
+- Fixed one bug in ipa: ipa incorrectly understood "unknown type
+  of frentry" in the IP Filter kernel table, actually this is IP Filter's bug
+- Revised manual pages and documentation
+- Minor improvements
+
+1.2.2	25/12/2001	released
+- Added OpenBSD Packet Filter support
+- Added protection against including already included configuration files
+- Fixed possible incorrect work with fcntl(2) (was used, when sending
+  a signal to the working copy of ipa)
+
+1.2.1	18/11/2001	released
+- Added new switch to ipastat: -k, assume that 1k is equal to 1000 bytes
+- Now it is possible to use abbreviated month names in -i and -I options
+  in ipastat
+- Now it is possible to run from the ipa's command line commands from
+  "reach" and "expire" sections
+- Speed-up configuration file parsing
+
+1.2	09/11/2001	released
+- Added new section "include" and new parameter "debug_include" to
+  the configuration file, also two switches "-tt" for ipa have new sense
+- Now ipastat correctly determines last day in the month in
+  incomplete time intervals (before it just sets last day to 31)
+- Fixed bug in ipastat: incomplete time intervals were not the same in
+  the -i and in the -I option
+- If gensysinfo script can't find ipl.h file, then it tries to parse
+  output of the "/sbin/ipf -V" command
+- Minor improvements and code style changes
+
+1.1.6	03/10/2001	released
+- Implemented new method of handling overflowed IPv4/v6 Firewall and
+  IP Filter accounting rules with the "maxchunk" parameter (thanks
+  to Vlad Timoshik <vlad@usr.com.ua> for the idea). Read more information
+  in the ipa.conf(5) manual page
+- Now ipa understands new signal: USR1, corresponding option
+  is "-k dump"
+
+1.1.5	04/09/2001	released
+- Fixed two incorrect memory access bugs in ipa
+- Fixed bug: "ipa -t" didn't show "info" parameters
+- Fixed bug: IPA could not be built on some versions of FreeBSD
+  with IPv6 Firewall support
+- Fixed some incorrect explanations of time intervals in the ipastat(8)
+  manual page
+
+1.1.4	16/07/2001	released
+- Added new options and new feature to ipa:
+  [-r <rule> [-l <limit>]] section [subsection]
+
+1.1.3	25/06/2001	released
+- Now IP Filter version is determined by parsing netinet/ipl.h file
+- Changed IP Filter rule group size from 16 bits to 32 bits, because of
+  the same changes in IP Filter v3.4.x
+- Changed -l option in ipa: -l -> -L
+- Manual pages were translated to Russian
+- A lot of errors were fixed in manual pages
+
+1.1.2	19/04/2001	released
+- Improved understanding of incomplete queries in -i and -I options in
+  ipastat: now -i 2000 means -i 2000.01.01/00:00:00-2000.12.31/24:00:00
+
+1.1.1	24/03/2001	released
+- Added new option to ipastat: -R <rule> allows to output summary
+  accounting information
+- Added new option to ipastat: -q, don't read and output any "info" files
+
+1.1	03/03/2001	released
+- Added NetBSD support
+- Added FreeBSD IPv6 Firewall support
+- Added new option to ipa: -c <directory>, specifies the <directory>
+  ipa should chroot(2) into immediately
+- Fixed incorrect work with "if_limit_is_not_reached" section in "rule" section
+- Fixed bug: ipa could forget that all commands in "reach" or "expire"
+  sections are executed
+
+1.0.4	11/02/2001	released
+- Fixed bug, which could cause core dump, strange incorrect work with
+  "exec" parameter (thanks to Billy <foobar@hotbox.ru> for bug reports
+  and testing)
+- Fixed bug: when some command in the "exec" parameter wrote to unopened
+  descriptor (for example stderr), then files in database could be
+  damaged
+
+1.0.3	21/01/2001	released
+- Fixed bug with "acl" parameter: groups didn't work in ACL
+- Fixed security bugs with exec(<user>)-like parameters: <user> inherited
+  supplementary GIDs
+- Added new parameter to "global" section: "only_abs_paths"
+- Fixed reconfigure facility. When ipa couldn't parse configuration file,
+  it begun to test it undefined times. Removed memory leak with worktime
+  parameter
+- Added new option to ipa: -l <log-facility>, probably should be used
+  with -p option
+
+1.0.2	02/01/2001	released
+- Added OpenBSD support (thanks to Chris Cappuccio <chris@dqc.org> for the
+  initial patch)
+- New record is always appended to database when ipa starts
+- Fixed bugs with timestamps
+- Added new option to ipa: -p <pid-file>, this option allows to start more
+  then one copy of ipa
+- Added database locking feature and three parameters: "lock_db",
+  "lock_wait_time" and "debug_lock"
+- Fixed reconfigure facility. When ipa couldn't parse configuration file,
+  it began to use some new settings
+
+1.0.1	04/12/2000	released
+- Fixed bug in database implementation: now a record at the end of the day
+  is updated with second timestamp equal to 24:00:00
+- Fixed bugs with -i and -I options in ipastat
+- Changed format for worktime parameter: added '*' for all minutes in a day
+- Added sorting of rules and limits when -a switch is used
+
+1.0	20/11/2000	released
+- Initial public release
+

@@ -1,0 +1,131 @@
+
+This version of IPA has been tested and run on following systems with
+default FreeBSD IPv4/v6 Firewall, default OpenBSD Packet Filter and
+default IP Filter version (by the author):
+
+* FreeBSD/i386 4.8, 5.1
+* NetBSD/i386 1.6
+* OpenBSD/i386 3.3
+
+Previous versions of IPA have been tested on following systems
+(by the author):
+
+* FreeBSD/i386 3.3, 3.4, 4.0-4.7, 5.0
+* NetBSD/i386 1.5, 1.5.1
+* OpenBSD/i386 2.7, 2.9, 3.0, 3.1, 3.2
+
+and this version is expected to run on them too.
+
+There isn't any guarantee that you can build it and run on some other system.
+
+To build and install IPA follows these steps (you can change some variables
+in the Makefile if needed):
+
+	1. download new version of IPA from:
+		* http://ipa-system.sourceforge.net/
+
+	2. unpack archive:
+		# tar -zxvf ipa-x.x.x.tar.gz
+		# cd ipa-x.x.x
+
+	3. build it (see BUILD NOTES below):
+		# make
+
+	4. install it to /usr/local:
+		# make install
+
+	   or specify the prefix for destination directories:
+		# make PREFIX=/some/dir install
+
+To run IPA, you will need to (default paths are used, if you changed
+default paths, then make the same steps but with your paths):
+
+	1. read manual pages ipa(8), ipa.conf(5)
+
+	2. add FreeBSD IPv4/v6 Firewall, OpenBSD Packet Filter and/or
+	   IP Filter support into your kernel, if you haven't done this yet.
+
+	3. customize the ipa.conf configuration file:
+		# [your_favourite_editor] /usr/local/etc/ipa.conf
+
+	4. rename the ipa.sh.sample shell script and run it:
+		# cd /usr/local/etc/rc.d; mv ipa.sh.sample ipa.sh
+		# /usr/local/etc/rc.d/ipa.sh
+
+	  or just run:
+		# /usr/local/bin/ipa
+
+
+* If you installed a kernel with new IPFW/IPF/PF implementation, then you
+  should also rebuild IPA, because it uses IPFW/IPF/PF kernel structures
+  (i.e. structures from some C-language header files) and they can be changed
+  from one version of the operating system to another one, but see below.
+
+* You should not rebuild IPA if you made changes in the kernel and those
+  changes did not cause changes in IPFW/IPF/PF parts of the kernel.
+
+* Here and everywhere in the IPA documentation "new kernel" or "new system"
+  actually mean "new kernel" and "new system" and "new C-header files", that
+  is if you installed new kernel, or new system, you should also install new
+  C-header files (usually files in the /usr/include directory).
+
+* You can check out for which system IPA was built
+  by running:
+	$ ipa -V
+
+  and you will get something like this:
+	IPA, version 1.1.3 (i386--FreeBSD 4.3-STABLE)
+	Compiled on:
+	   o Jun 15 2001, 23:49:13
+	Support:
+	   o IPv4 Firewall
+	   o IPv6 Firewall
+	   o IP Filter v3.4.16
+
+To deinstall IPA from your system follow these steps:
+
+	1. `cd' to its source directory and run:
+		# make deinstall
+
+	   or specify the prefix for destination directories:
+		# make PREFIX=/some/dir deinstall
+
+	2. remove database made by IPA (by default it is /var/ipa/)
+
+	3. remove the configuration file and the shell script if you created
+           them
+
+BUILD NOTES
+===========
+
+It is possible to remove not needed accounting systems support from
+IPA during compilation, use one or combination of following options for
+the make(1) program:
+
+-DWITHOUT_IPFW  -- remove FreeBSD IPv4 Firewall support (affect FreeBSD)
+-DWITHOUT_IP6FW -- remove FreeBSD IPv6 Firewall support (affect FreeBSD>=4.2)
+-DWITHOUT_PF    -- remove OpenBSD Packet Filter support (affect OpenBSD>=3.0)
+-DWITHOUT_IPFIL -- remove IP Filter support (affect all systems)
+
+If you want to use FreeBSD IPFW2 in IPA, then you can enable the IPFW2
+support with the compile option -DIPFW2, but before this, check output
+of the "ipa -V" command, may be IPFW2 is used by default on your system.
+
+There were bugs in FreeBSD IPv6 Firewall implementation since FreeBSD
+4.0-RELEASE (?) and IPA started to work correctly with IPv6 Firewall after
+FreeBSD 4.2-RELEASE, when those bugs were fixed. Try to run "ipa -V", if
+you do not see "IPv6 Firewall" in the output, but you know that your
+FreeBSD has IPv6 Firewall support and your IPv6 Firewall does not have
+kern/24248 bug, then you can enable IPv6 Firewall with the compile
+option -DWITH_IP6FW
+
+If you use FreeBSD or NetBSD with OpenBSD Packet Filter and want
+IPA to work with it, then add the -DWITH_PF compile option.
+If compilation failed, because some PF C-headers files weren't
+found, then define the PF_INCLUDE_DIR=<directory> compile option,
+where <directory> is the path to PF C-headers files (find that
+directory before).
+Example: make -DWITH_PF PF_INCLUDE_DIR=/usr/local/include/pf
+
+Andrey Simonenko
+simon@comsys.ntu-kpi.kiev.ua

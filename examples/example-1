@@ -1,0 +1,56 @@
+#
+# @(#)$Id: example-1,v 1.3 2002/12/19 18:56:06 simon Exp $
+#
+# example-1
+#
+# FreeBSD server has two PPP links ppp0 and ppp1 with local IP addresses
+# 10.100.10.10 and 10.200.20.20. IP Firewall is used on the server.
+#
+# It is needed to make IP accounting for each PPP link, but for
+# the first link ppp0 we also should make separate IP accounting for
+# incoming and outgoing traffic.
+#
+# There is special group "staff" which is responsible for IP accounting
+# for interface ppp1, and users in this group should be allowed to view
+# statistics for ppp1 link.
+#
+
+# Start all needed IP Firewall rules during IPA startup.
+# This rules also can be started somewhere in external scripts.
+# We could not specify local IP addresses in IP Firewall rules,
+# but this helps to protect traffic accounting from
+# "ping -S 127.0.0.1 remote.host.com" like commands.
+
+# NOTE: it is better to put IP Firewall rules into one file and tell
+# ipfw(8) to use it.
+
+startup {
+    exec = /sbin/ipfw 100 allow all from 10.100.10.10 to any via ppp0
+    exec = /sbin/ipfw 200 allow all from any to 10.100.10.10 via ppp0
+    exec = /sbin/ipfw 300 allow all from 10.200.20.20 to any via ppp1
+    exec = /sbin/ipfw 300 allow all from any to 10.200.20.20 via ppp1
+}
+
+rule ppp0 {
+    ipfw = 100 200
+    info = Summary traffic for ppp0
+}
+
+rule ppp0_in {
+    ipfw = 100
+    info = Incomming traffic for ppp0
+}
+
+rule ppp0_out {
+    ipfw = 200
+    info = Outgoing traffic for ppp0
+}
+
+# There are two IP Firewall rules with the same number 300, they
+# are distinguished by subnumbers.
+
+rule ppp1 {
+    ipfw = 300 300.1
+    db_group = staff
+    info = Summary traffic for ppp1
+}

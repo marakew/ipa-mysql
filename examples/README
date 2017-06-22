@@ -1,0 +1,13 @@
+
+
+  Good examples of configuration files are required.
+
+  If you use IPA and think that your configuration file will be interesting
+for all, please email it me. If you have time, please add comments to your
+configuration file, it will help somebody. Include scripts, which set
+FreeBSD IPv4/v6 Firewall, OpenBSD Packet Filter and/or IP Filter accounting
+rules (if they are not set from the file ipa.conf of course) in your email
+if it is possible.
+
+Thanks.
+

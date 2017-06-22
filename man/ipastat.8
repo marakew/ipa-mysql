@@ -1,0 +1,316 @@
+.\" Copyright (c) 2000-2002 Andrey Simonenko
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" @(#)$Id: ipastat.8,v 1.6.2.1 2003/02/19 22:04:34 simon Exp $
+.\"
+.TH IPASTAT 8 "August 29, 2002"
+.SH NAME
+ipastat \- viewer for IP accounting database made by ipa(8)
+.SH SYNOPSIS
+\fBipastat\fP\ [\fB-hv\fP]
+.br
+\fBipastat\fP\ [\fB-abekLnqtx\fP]\ [\fB-AKMGT\fP]\ [\fB-d\fP\ <db-directory>]
+.br
+\ \ \ \ \ \ \ \ [\fB-p\fP\ <time-back>]\ [\fB-I\fP|\fBi\fP\ <time-interval>]
+.br
+\ \ \ \ \ \ \ \ [\fB-R\fP|\fBr\fP\ <rule>\ [\fB-l\fP\ <limit>]]
+.SH DESCRIPTION
+\fBipastat\fP is a viewer for IP accounting database made by \fBipa\fP(8).
+.PP
+Everyone can run \fBipastat\fP(8), but to view statistics one should belong
+to appropriate user group(s) (access to some rule in the database is determined
+by the \fBdb_group\fP parameter in the configuration file).
+.PP
+Available options are:
+.IP \fB-a\fP
+Print names of all rules, which the user can view or print names of all limits
+for the rule specified in the \fB-r\fP option.
+.IP \fB-b\fP
+Sort summary accounting information by byte counters, two switches \fB-bb\fP
+give reverse order of sorting. This switch can be used with some
+\fB-R\fP options.
+.IP \fB-d\fP\ <db-directory>
+Use given <db-directory> instead of using default database directory /var/ipa.
+.IP \fB-e\fP
+Do not check dates in accounting files. By default if \fBipastat\fP(8) finds any
+error with dates in accounting files, then it does not show accounting
+information and outputs an error message.
+.IP \fB-h\fP
+Print help message about available options and exit.
+.IP \fB-I\fP|\fBi\fP\ <time-interval>
+Specify <time-interval> for output accounting information. If the \fB-I\fP
+option is used, then check second timestamps of accounting records in
+the database. If the \fB-i\fP option is used, then do not check second
+timestamps of accounting records in the database. Format for <time-interval>
+see below. Read more about difference between these two options below.
+.IP \fB-k\fP
+Assume that 1K is equal to 1000 bytes and so on.
+.IP \fB-L\fP
+Use database locking feature.
+.IP \fB-n\fP
+Do not indent information and do not print tables when output results. Use this
+option if you want to parse output of this program.
+.IP \fB-p\fP\ <time-back>
+"Go back" in time, then output statistics. This option can be used with the
+\fB-i\fP or \fB-I\fP option.
+.IP \fB-q\fP
+Do not read and output any \fBinfo\fP files (this switch can help to
+place too wide tables on the screen).
+.IP \fB-R\fP\ <rule>
+Output summary accounting information for specified <rule>, it is possible to
+specify some \fB-R\fP options at once (-R <rule1> -R <rule2> ... -R <rulen>).
+.IP \fB-r\fP\ <rule>\ [\fB-l\fP\ <limit>]
+Output accounting information for specified <rule>, statistics is output per
+day. Or output accounting information for specified <limit> for <rule>.
+.IP \fB-t\fP
+Output accounting information for the rule per timestamp. I.e. output
+accounting information as it is stored in the database.
+.IP \fB-v\fP
+Show version number and exit.
+.IP \fB-x\fP
+Treat rule names as POSIX regular expressions \fBre_format\fP(7). If this
+switch is used with the \fB-r\fP option, then the first matched rule is taken.
+If this switch is used with \fB-R\fP options, then all rules matched any of
+given regular expressions are taken.
+.PP
+Switches for byte counters conversion:
+.IP \fB-A\fP
+Convert values of byte counters to Tbytes, Gbytes, Mbytes, Kbytes
+and bytes (convert as much as possible).
+.IP \fB-K\fP|\fBM\fP|\fBG\fP|\fBT\fP
+Convert values of byte counters to Kbytes, Mbytes (this is default),
+Gbytes or Tbytes.
+.PP
+Accounting information is output only for <time-interval> specified with the
+\fB-i\fP or \fB-I\fP option. If the \fB-i\fP or \fB-I\fP option is omitted, then
+\fBipastat\fP(8) outputs accounting information for the current month. The base
+format of <time-interval> is following:
+.PP
+	Y1.M1.D1/h1:m1:s1-Y2.M2.D2/h2:m2:s2
+.PP
+where Y1, Y2 - years, M1, M2 - months, D1, D2 - days, h1, h2 - hours, m1, m2 -
+minutes and s1, s2 - seconds. <time-interval> consists of left and right parts.
+Date in the right part should be greater or equal to date in the left part.
+Each accounting record in the database is stored with two timestamps: first
+timestamp is equal to time when a record was appended, second timestamp is
+equal to time when a record was updated at last time. h1:m1:s1 determines first
+timestamp and h2:m2:s2 determines second timestamp. Y1.M1.D1 and Y2.M2.D2
+determine two dates. Accounting information is output if it is found for
+days between first date Y1.M1.D1 and second date Y2.M2.D2 and if first
+timestamp for found day is greater or equal to h1:m1:s1. \fBipastat\fP(8)
+does not check second timestamp until you specified <time-interval> with the
+\fB-I\fP option. Usually there is no sense to check second timestamp, because if
+first timestamp fits to <time-interval>, then a record is considered to be
+interesting for the user. But the \fB-I\fP option can change this.
+.PP
+But you are not required to specify whole format for <time-interval>. You can
+miss almost all elements in <time-interval>. Let's look at some examples
+(following values can be used in the left part, as well in the right part):
+.PP
+	2000
+.br
+	1999.11
+.br
+	5
+.br
+	12.8
+.br
+	.19
+.PP
+Number 2000 is "year 2000". It is an equivalent for 2000.01.01/00:00:00 for the
+left part, i.e. beginning of the year and is an equivalent for
+2000.12.31/24:00:00 for the right part, i.e. end of last second of year 2000.
+String 1999.11 is "11th month of year 1999". Similarly it is an equivalent for
+1999.11.01/00:00:00 for the left part and 1999.11.30/24:00:00 for the right
+part. Number 5 means "5th month of current year". It is an equivalent for
+????.05.01/00:00:00 for the left part and ????.05.31/24:00:00 for the right
+part. String 12.8 is "8th day of 12th month of current year". It is an
+equivalent for ????.12.08/00:00:00 for the left part and ????.12.08/24:00:00
+for the right part. Last string .19 means "19th day of current month".
+Equivalents for the left and right parts are similar as for the previous
+example. \fINOTE\fP: the year should be specified as four or more digits long
+number, months, days, hours, minutes and seconds should be specified as one or
+two digits long numbers.
+.PP
+Additionally you can specify time followed after the `\fB/\fP' character. Also
+you can omit date and specify only time, in this case time is considered as
+time of current day. Let's look at some examples (following values can be used
+in the left part, as well in the right part):
+.PP
+	/12
+.br
+	/10:31
+.br
+	/9:11:01
+.PP
+String /12 is "12 hours". It is an equivalent for 12:00:00 for the left part and
+13:00:00 for the right part. String /10:31 is "10 hours and 31 minutes". It is
+an equivalent for 10:31:00 for the left part and 10:32:00 for the right part.
+String /9:11:01 is "9 hours, 11 minutes and 1 second". It is equal to 9:11:01 for
+both parts.
+.PP
+In all cases if the left part of <time-interval> is not complete, then
+\fBipastat\fP(8) takes first second of first minute of first hour, etc. If
+the right part of <time-interval> is not complete, then \fBipastat\fP(8) takes
+the end of last second of last minute of last hour, etc. You can see it from
+the previous examples: string /12 in the right part of time-interval means
+13:00:00 and does not mean 12:59:59, because \fBipastat\fP(8) takes the end of last
+second and does not take the beginning of last second.
+.PP
+The right part of <time-interval> can be omitted. In this case \fBipastat\fP(8) will
+consider the value of the right part equal to the value of the left part.
+But this is correct, for example strings "2000" and "2000-2000" are the same and
+mean all days in year 2000.
+.PP
+Here it is some examples of <time-interval>:
+.PP
+	1999-2000
+.PP
+It means all days from 1th January 1999 to the midnight of 31th December 2000.
+.PP
+	/10
+.PP
+It means all minutes from 10:00:00 to 11:00:00 of current day.
+.PP
+	.22/01-/20:10
+.PP
+It means all minutes (and days) from 1:00:00 of 22th day of current month to
+20:11:00 of current day.
+.PP
+\fINOTE\fP: if you find out that second timestamp of some record is equal to
+24:00:00, then you should consider it as the end of the day. Usually all
+timestamps should be started at 00:00:00 and stopped at 24:00:00 for each day.
+.PP
+It is possible to use abbreviated month names in \fB-i\fP and \fB-I\fP
+options. Case of the abbreviated month name is ignored. Following abbreviated
+month names are available: Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct,
+Nov and Dec.
+.PP
+With the \fB-p\fP option it is possible to make following queries to the
+database: "statistics for previous month", "statistics from September to
+November of previous year", "statistics for previous week". Read information
+about <time-back>'s format in the Examples section of this manual page.
+.PP
+All results generated by \fBipastat\fP(8) are indented and printed in tables,
+until the \fB-n\fP option is specified. If some error occurs, then
+\fBipastat\fP(8) prints empty line (line with no characters) and then prints
+an error/warning message, and then prints an empty line one more (an empty line
+actually has one character `\\n'). If you are going to parse output of this
+program, you should use the \fB-n\fP option, after this all output is very
+simple: values in each line are separated by single white space and titles of
+tables are not output at all.
+.PP
+\fINOTE\fP: the format of the output with the \fB-n\fP switch is a bit
+different, than the format of the output without this switch. All changes of
+the format were made for simplifying parsing of the output.
+.PP
+Normally there are two programs which can simultaneously access the database.
+These programs are \fBipa\fP(8) and \fBipastat\fP(8). By default \fBipa\fP(8)
+does not lock any file it modifies and \fBipastat\fP(8) does not lock
+any file it accesses. \fBipastat\fP(8) will try to obtain lock on whole
+database and needed files if it runs with the \fB-L\fP switch in its
+command line. If it cannot obtain lock during 10 seconds, it outputs
+warning message and reads nothing. Read manual page \fBipa.conf\fP(5)
+for more information about advantages and disadvantages of database
+locking feature (paragraphs about the \fBlock_db\fP parameter).
+.PP
+\fBipastat\fP(8) exits with a return code of 0 or with a return code not equal
+to 0 if something was wrong.  Also \fBipastat\fP(8) returns error code if
+you are not allowed to view statistics for some rule (or limit).
+.SH EXAMPLES
+Output statistics for the rule "rule" for the current month:
+.PP
+    $ ipastat -r rule
+.PP
+Output statistics for the rule "rule" from 21th of September to the end of
+November:
+.PP
+    $ ipastat -r rule sep.21-nov
+.PP
+    or
+.PP
+    $ ipastat -r rule 9.21-11
+.PP
+Output statistics for the rule "rule" for September 2001:
+.PP
+    $ ipastat -r rule 2001.sep
+.PP
+    or
+.PP
+    $ ipastat -r rule 2001.9
+.PP
+Output summary statistics for rules "rule1" and "rule2" for 2000 and 2001 years,
+convert byte counters to Gbytes:
+.PP
+    $ ipastat -R rule1 -R rule2 -i 2000-2001 -G
+.PP
+Output the same statistics, but sort output statistics by byte counters:
+.PP
+    $ ipastat -R rule1 -R rule2 -i 2000-2001 -G -b
+.PP
+Output statisctis for the rule "rule" for the previous month:
+.PP
+    $ ipastat -r rule -p 1m
+.PP
+Output statistics for the rule "rule" from September to November of previous
+year:
+.PP
+    $ ipastat -r rule -p 1y -i sep-nov
+.PP
+Output statistics for the same period but for the year before previous year:
+.PP
+    $ ipastat -r rule -p 2y -i sep-nov
+.PP
+Output statistics for the rule "rule" for the previous week:
+.PP
+    $ ipastat -r rule -p 1w
+.PP
+Output statistics for the rule "rule" for the previous day from 10:00 to 22:30
+(of course your configuration file should have appropriate settings to allow
+to get such statistics):
+.PP
+    $ ipastat -r rule -p 1d -i /10-/22:30
+.PP
+Output statistics for all rules for previous month:
+.PP
+    $ ipastat -x -R . -p 1m
+.PP
+Output statistics for all rules with prefix "10.", or which end with ".123"
+for current month:
+.PP
+    $ ipastat -x -R ^10\\. -R \\.123$
+.PP
+Output statistics for one rule which ends with "abc":
+.PP
+    $ ipastat -x -r abc$
+.SH FILES
+/var/ipa/
+.br
+/usr/local/etc/ipa.conf
+.SH SEE ALSO
+ipa.conf(5), ipa(8)
+.SH AUTHOR
+Andrey\ Simonenko\ <simon@comsys.ntu-kpi.kiev.ua>
+.SH BUGS
+If you find any, please send email me.

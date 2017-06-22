@@ -1,0 +1,230 @@
+.\" Copyright (c) 2000-2003 Andrey Simonenko
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\" @(#)$Id: ipa.8,v 1.6.2.2 2003/02/20 06:26:57 simon Exp $
+.\"
+.TH IPA 8 "January 14, 2003"
+.SH NAME
+ipa \- utility for IP accounting
+.SH SYNOPSIS
+\fBipa\fP\ [\fB-hVv\fP]
+.br
+\fBipa\fP\ [\fB-c\fP\ <directory>]\ [\fB-p\fP\ <pid-file>]\ \fB-k\fP\ <signal>
+.br
+\fBipa\fP\ [\fB-c\fP\ <directory>]\ \fB-t\fP\ [\fB-t\fP]\ [\fB-f\fP\ <config-file>]
+.br
+\fBipa\fP\ [\fB-d\fP]\ [\fB-c\fP\ <directory>]\ [\fB-f\fP\ <config-file>]
+.br
+\ \ \ \ [\fB-p\fP\ <pid-file>]\ [\fB-L\fP\ <log-facility>]
+.br
+\fBipa\fP [\fB-c\fP <directory>] [\fB-f\fP <config-file>]
+.br
+\ \ \ \ [\fB-r\fP\ <rule>\ [\fB-l\fP\ <limit>]]\ section\ [subsection]
+.SH DESCRIPTION
+\fBipa\fP allows to make IP accounting based on FreeBSD IPv4/v6 Firewall (IPFW)
+rules, OpenBSD Packet Filter (PF) rules and IP Filter (IPF) accounting rules
+on FreeBSD, NetBSD and OpenBSD, stores all accounting information in the database,
+supports database locking, allows to set up limits for each accounting rule,
+understands time intervals like "end of day", "end of week", etc. \fBipa\fP(8)
+reads its configuration from the file \fB/usr/local/etc/ipa.conf\fP or from
+other one given in the command line. Read manual page \fBipa.conf\fP(5) for
+detail description of \fBipa\fP(8) features.
+.PP
+If \fBipa\fP(8) was compiled with the \fB-DIPFW2\fP on FreeBSD 4.x, then
+it uses IPFW2.
+.PP
+Only the super-user can use all features of \fBipa\fP(8),
+other users can use it only for testing configuration files,
+viewing its version and help messages.
+.PP
+All accounting information made by \fBipa\fP(8) is stored in the directory
+\fB/var/ipa\fP by default or in other directory specified in the \fBdb_dir\fP
+parameter in the configuration file. There is a special program
+\fBipastat\fP(8) for reading and outputing accounting statistics.
+To allow some other users except the super-user to read
+statistics set up appropriate \fBdb_group\fP parameters in the
+configuration file(s) (read about this parameter in the \fBipa.conf\fP(5)
+manual page). Read the \fBipa\fP(5) manual page for more
+information about IP accounting database implementation.
+.PP
+\fBipa\fP(8) locks the file \fB/var/run/ipa.pid\fP to prevent multiple copies
+of itself from running and stores its PID in this file.
+.PP
+Available options are:
+.IP \fB-c\fP\ <directory>
+Specifies the <directory> \fBipa\fP(8) should chroot(2) into immediately.
+<directory> should be given with absolute path.
+.IP \fB-d\fP
+Do not run in the background, write all log messages to stderr, as well to
+syslog. It is useful option for debugging a configuration file and testing
+IPFW/IPF/PF accounting rules.
+.IP \fB-f\fP\ <config-file>
+Use given <config-file> instead of using default configuration file
+\fB/usr/local/etc/ipa.conf\fP. \fINOTE\fP: a configuration file should be given
+with absolute pathname (i.e. starts with the `/' character).
+.IP \fB-h\fP
+Print help message about available options and exit.
+.IP \fB-k\fP\ <signal>
+Send <signal> to running copy of \fBipa\fP(8). Valid arguments are:
+\fBshutdown\fP (send signal TERM), \fBreconfigure\fP (send signal HUP),
+\fBkill\fP (send signal KILL), \fBdump\fP (send signal USR1). PID of running
+copy is taken from the file \fB/var/run/ipa.pid\fP or from other one given in
+the \fB-p\fP option. \fINOTE\fP: do not use signal KILL to shutdown \fBipa\fP(8),
+use this signal if only \fBipa\fP(8) does not work properly and does not catch
+signal TERM (or signal INT if it is run in the foreground regime). \fBipa\fP(8)
+will not send any signals, if its pid-file is not locked.
+.IP \fB-L\fP\ <log-facility>
+Use given syslog <log-facility> instead of using default facility "ipa".
+.IP \fB-p\fP\ <pid-file>
+Use given <pid-file> instead of using default file \fB/var/run/ipa.pid\fP to
+store or read PID of the running copy. This option allows to start some copies
+of \fBipa\fP(8) at once (probably for the testing purpose). If the \fB-p\fP
+option is used with the \fB-k\fP option, then the \fB-p\fP option should be
+specified first.
+.IP \fB-r\fP\ <rule>\ [\fB-l\fP\ <limit>]
+Specifies <rule> (and <limit>) from where following section (and subsection)
+should be taken.
+.IP \fB-t\fP
+Parse the configuration file (default or specified in the \fB-f\fP option),
+output its content and exit. This option allows to check if \fBipa\fP(8)
+understands your configuration file. Also outputted configuration file is
+indented and can be used as original. For example, run:
+
+	$ ipa -t -f some-config-file > ipa.conf
+
+to produce indented version of some-config-file.
+.IP
+If two \fB-tt\fP switches are used, then \fBipa\fP(8) includes all configuration
+files from \fBinclude\fP section(s) and checks them as one configuration file.
+In this case \fBipa\fP(8) also outputs all information about included and
+not included files and directories in comments.
+.IP \fB-V\fP
+Show information about \fBipa\fP(8) and supported IP accounting systems.
+.IP \fB-v\fP
+Show version number and exit.
+.IP section\ [subsection]
+Run commands from the given section: "startup", "shutdown" (subsection can be
+"if_limit_is_reached" or "if_limit_is_not_reached"), "reach" or "expire".
+It is possible to use short forms of subsection names, read more about this on
+the \fBipa.conf\fP(5) manual page.
+.PP
+\fBipa\fP(8) understands signals \fBTERM\fP, \fBHUP\fP and \fBUSR1\fP (also
+\fBINT\fP if it is run in the foreground regime). Signal \fBTERM\fP (or \fBINT\fP)
+causes to shutdown running copy of \fBipa\fP(8). This is only one correct way
+to shutdown \fBipa\fP(8): it flushes counters and closes database files. Signal
+\fBTERM\fP is sent automatically to all processes when whole BSD system is
+going down and there is usually no necessary to write own script to shutdown
+\fBipa\fP(8). \fINOTE\fP: \fBsyslogd\fP(8) usually is terminated first and
+\fBipa\fP(8) cannot log last messages to syslog. If the \fB-d\fP switch is
+specified then signal \fBINT\fP is handled as signal \fBTERM\fP (signal
+\fBINT\fP usually is sent to a foreground process when you type Control-C
+sequence).
+.PP
+Signal \fBUSR1\fP tells \fBipa\fP(8) to dump current values of counters to
+the database, this allows to safe more accounting information before reloading
+IPFW/IPF/PF accounting rules. Of course you have to wait some time (it depends
+on your configuration file) to be sure that \fBipa\fP(8) stored all
+accounting information to the database.
+.PP
+Signal \fBHUP\fP causes to reread configuration file (default or specified
+in the command line when \fBipa\fP(8) was run). Running copy of \fBipa\fP(8)
+begins to use new settings from the reread configuration file only if
+\fBipa\fP(8) can parse the configuration file(s). If \fBipa\fP(8) cannot
+parse the configuration file(s), then it continues to use old settings.
+\fBipa\fP(8) also continues to use old settings if access permission bits
+(mode) of the configuration file are incorrect. Not all settings from
+the reread configuration file(s) are used,
+read the \fBipa.conf\fP(5) manual page for more information.
+.PP
+\fBipa\fP(8) logs messages to the \fBsyslogd\fP(8). So, it is better before
+first its start to add something likes this to the file \fBsyslog.conf\fP(5):
+.PP
+!ipa
+.br
+*.*<TAB>/var/log/ipa.log
+.PP
+then create log-file:
+.PP
+# touch /var/log/ipa.log
+.PP
+and restart \fBsyslogd\fP(8). If your system does not support such syntax of
+\fBsyslog.conf\fP(5), you can specify valid for your system log-facility with
+the \fB-L\fP option.
+.PP
+Log-messages sent by \fBipa\fP(8) have following levels: LOG_INFO (normal
+messages), LOG_WARNING (some IPFW/IPF/PF rule does not exist, was removed,
+was added, etc.) and LOG_ERR (something really serious). If \fBipa\fP(8)
+sends the log-message with the level LOG_ERR, then it probably will exit.
+.PP
+\fBipa\fP(8) exits with a return code of 0 or with a return code not equal to
+0 if something was wrong (usually it is wrong format of the configuration file).
+\fINOTE\fP: by default \fBipa\fP(8) is run in the background and you should
+not rely upon its return code (it is just a return code of a original process),
+it is better to look at its log-file.
+.SH IMPLEMENTATION NOTES
+\fBipa\fP(8) allows to make IP accounting based on FreeBSD IPv4/v6 Firewall,
+OpenBSD Packet Filter or IP Filter accounting rules. So, if you haven't added
+FreeBSD IPv4/v6 Firewall, OpenBSD Packet Filter or IP Filter support into your
+kernel, you should do it, recompile kernel and restart your system. Also you
+should set accounting rules somewhere. Read the \fBipa.conf\fP(5) manual page
+for information where it is better to do it.
+.PP
+IPv4 Firewall first appeared in FreeBSD 2.0. IPv6 Firewall first appeared
+in FreeBSD 4.0, but due to bugs in its code \fBipa\fP(8) (in default
+installation) works with it after FreeBSD 4.2-RELEASE.
+.PP
+FreeBSD IPFW2 was introduced in Summer 2002.
+.PP
+Packet Filter first appeared in OpenBSD 3.0.
+.PP
+IP Filter supports FreeBSD, NetBSD and OpenBSD. IP Filter was removed
+from OpenBSD distribution in OpenBSD 3.0.
+.PP
+If you installed a kernel with new IPFW/IPF/PF implementation, then you
+should also rebuild \fBipa\fP(8), because it uses IPFW/IPF/PF kernel
+structures (i.e. structures from some C-language header files)
+and they can be changed from one version of the operating system to another
+one, but see below.
+.PP
+You should not rebuild \fBipa\fP(8) if you made changes in the kernel and those
+changes did not cause changes in IPFW/IPF/PF parts of the kernel.
+.SH FILES
+/var/run/ipa.pid
+.br
+/var/ipa/
+.br
+/usr/local/etc/ipa.conf
+.br
+${PREFIX}/etc/ipa.conf.default
+.br
+${PREFIX}/share/examples/ipa/
+.PP
+(by default ${PREFIX} is /usr/local)
+.SH SEE ALSO
+ipa(5), ipa.conf(5), ipastat(8), ipf(1), ipfw(8), ip6fw(8), pf(4), pf.conf(5),
+pfctl(8), syslogd(8)
+.SH AUTHOR
+Andrey\ Simonenko\ <simon@comsys.ntu-kpi.kiev.ua>
+.SH BUGS
+If you find any, please send email me.

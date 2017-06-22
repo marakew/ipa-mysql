@@ -1,0 +1,14 @@
+#
+# Default configuration file for ipa(8).
+# @(#)$Id: ipa.conf.default,v 1.6 2002/12/19 18:56:05 simon Exp $
+#
+
+# global {
+#
+# It's *recommended* to set ``maxchunk'' parameter in the ``global''
+# section or in the ``rule'' sections, there isn't default value for it.
+# See the ipa.conf(5) manual page for more information about its value.
+#
+#	maxchunk = 1G
+#
+# }

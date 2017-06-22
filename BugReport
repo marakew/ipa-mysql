@@ -1,0 +1,16 @@
+IPA bug report form
+-------------------
+
+IPA Version (output of the "ipa -V" command):
+Operating System Version:
+IP Filter Version (if used):
+
+Description of problem:
+
+(include configuration file(s), FreeBSD IPv4/v6 Firewall,
+OpenBSD Packet Filter and/or IP Filter rules if possible)
+
+How to reproduce the problem (if it is possible):
+
+How to fix that problem (if it is know):
+
