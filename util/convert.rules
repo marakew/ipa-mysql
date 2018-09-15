@@ -1,0 +1,40 @@
+#!/usr/bin/perl
+
+use DBI;
+#use DBD;
+#use strict;
+#use DBI::DBD;
+
+
+my	$dbase="ipa";
+my	$login="ipauser";
+my	$pass="ipauser";
+
+
+	print "CREATE TABLE IF NOT EXISTS rules (\n";
+        print "		who varchar(32) NOT NULL default '',\n";
+        print "		cost double NOT NULL default '0',\n";
+        print "		tm1 datetime NOT NULL default '2000-01-01 00:00:00',\n";
+        print "		tm2 datetime NOT NULL default '0000-00-00 00:00:00',\n";
+        print "		byte bigint unsigned NOT NULL default '0',\n";
+        print "		byte_in bigint unsigned NOT NULL default '0',\n";
+        print "		byte_out bigint unsigned NOT NULL default '0',\n";
+        print "		PRIMARY KEY (who,tm1)\n";
+	print ") TYPE=MyISAM;\n";
+	print "\n";
+
+$dbh = DBI->connect("DBI:mysql:$dbase",$login,$pass) or die DBI::errstr;
+ 
+my $sth = $dbh->prepare("SELECT who,cost,from_unixtime(tm1),from_unixtime(tm2),byte,byte_in,byte_out FROM rules");
+#my $sth = $dbh->prepare("SELECT who,cost,tm1,tm2,byte,byte_in,byte_out FROM rules");
+	$sth->execute();
+	while (my $ref = $sth->fetchrow_hashref()) {
+		print "INSERT INTO rules (who,cost,tm1,tm2,byte,byte_in,byte_out) ";
+		print "VALUES ('$ref->{'who'}',$ref->{'cost'},'$ref->{'from_unixtime(tm1)'}','$ref->{'from_unixtime(tm2)'}',$ref->{'byte'},$ref->{'byte_in'},$ref->{'byte_out'});";
+#		print "VALUES ('$ref->{'who'}',$ref->{'cost'},'$ref->{'tm1'}','$ref->{'tm2'}',$ref->{'byte'},$ref->{'byte_in'},$ref->{'byte_out'});";
+		print "\n";
+
+	}
+
+$sth->finish();
+$dbh->disconnect;

@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+
+use DBI;
+#use DBD;
+#use strict;
+#use DBI::DBD;
+
+
+my	$dbase="ipa";
+my	$login="ipauser";
+my	$pass="ipauser";
+
+
+	print "WorkDir: /usr/local/apache/hosts/local/noc/lln/img\n";
+	print "#WriteExpires: Yes\n";
+	print "#Language: russian\n";
+	print "#Options[_]: bits\n";
+	print "#Colours[_]: BULE#92B7F3,GREEN#1D429D,GRAY#AAAAAA,VIOLET#FF00FF\n\n\n";
+
+$dbh = DBI->connect("DBI:mysql:$dbase",$login,$pass) or die DBI::errstr;
+ 
+my $sth = $dbh->prepare("SELECT name,rname FROM users ORDER BY name");
+	$sth->execute();
+	while (my $ref = $sth->fetchrow_hashref()) {
+		print "Target[$ref->{'name'}]: `/usr/local/etc/mrtg/lmrtg $ref->{'name'}`\n";
+		print "Title[$ref->{'name'}]: $ref->{'rname'}\n";
+		print "PageTop[$ref->{'name'}]: <H1> $ref->{'rname'} </H1>\n";
+		print "MaxBytes[$ref->{'name'}]: 100000\n";
+		print "#AbsMax[$ref->{'name'}]: 100000\n";
+		print "#ShortLegend[$ref->{'name'}]: bit/s\n";
+		print "#Options[$ref->{'name'}]: bits\n";
+		print "\n";
+
+	}
+
+$sth->finish();
+$dbh->disconnect;

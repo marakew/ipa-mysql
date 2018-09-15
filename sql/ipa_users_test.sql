@@ -1,0 +1,1 @@
+INSERT INTO users (name,passwd,rname,ip,rule,trafcost) VALUES ('comp',encrypt('comp'),'comp','192.168.1.8','192.8','0');

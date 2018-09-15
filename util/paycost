@@ -1,0 +1,32 @@
+#!/usr/bin/perl
+
+use DBI;
+#use DBD;
+#use strict;
+#use DBI::DBD;
+
+
+my	$dbase="ipa";
+my	$login="ipauser";
+my	$pass="ipauser";
+
+
+$dbh = DBI->connect("DBI:mysql:$dbase",$login,$pass) or die DBI::errstr;
+ 
+my $sth = $dbh->prepare("SELECT name,deposit,pay_cost FROM users ORDER BY name");
+   $sth->execute();
+
+	while (my $ref = $sth->fetchrow_hashref()) {
+
+		if ($ref->{'pay_cost'} > 0){
+		print "$ref->{'name'}: $ref->{'pay_cost'}\n";
+
+		my $sth2 = $dbh->prepare("UPDATE users SET deposit = deposit - pay_cost WHERE name='$ref->{'name'}'");
+		   $sth2->execute();
+
+		}
+
+	}
+
+$sth->finish();
+$dbh->disconnect;

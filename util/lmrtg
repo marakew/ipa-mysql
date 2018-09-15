@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+
+use DBI;
+
+
+	if( ! $ARGV[0] ) {
+	print("\n Usage: lmrtg name \n");
+	exit();
+	}
+
+	$name = $ARGV[0];
+
+my	$dbase="ipa";
+my	$login="ipauser";
+my	$pass="ipauser";
+
+$dbh = DBI->connect("dbi:mysql:$dbase",$login,$pass) or die DBI::errstr;
+ 
+#$sth = $dbh->do("SELECT name,rule FROM users WHERE name='$name'");
+
+#($user,$rule) = $sth->fetchrow_array();
+($user,$rule) = $dbh->selectrow_array("SELECT name,rule FROM users WHERE name='$name'");
+
+
+#$sth = $dbh->do("SELECT SUM(byte_in),SUM(byte_out) FROM rules WHERE who='$rule' AND date_format(from_unixtime(tm1),'%Y-%m') = date_format(NOW(),'%Y-%m')");
+
+#($in,$out) = $sth->fetch;
+#($in,$out) = $dbh->selectrow_array("SELECT SUM(byte_in),SUM(byte_out) FROM rules WHERE who='$rule' AND date_format(from_unixtime(tm1),'%Y-%m') = date_format(NOW(),'%Y-%m')");
+
+#my $sth = $dbh->prepare("SELECT name,rname FROM users ORDER BY name");
+#my $sth = $dbh->prepare("SELECT SUM(byte_in),SUM(byte_out) FROM rules WHERE who='$rule' AND date_format(from_unixtime(tm1),'%Y-%m') = date_format(NOW(),'%Y-%m')");
+my $sth = $dbh->prepare("SELECT SUM(byte_in),SUM(byte_out) FROM rules WHERE who='$rule' AND date_format(tm1,'%Y-%m') = date_format(NOW(),'%Y-%m')");
+	$sth->execute();
+
+        while (my $ref = $sth->fetchrow_hashref()) {
+		$in = $ref->{'SUM(byte_in)'};
+		$out = $ref->{'SUM(byte_out)'};
+	}
+		if ($in){} else {$in = 0;}
+		if ($out){} else {$out = 0;}
+
+$sth->finish();
+$rc = $dbh->disconnect;
+
+print "$in\n$out\n0\n$name\n";

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+ipacmd=`ps ax|grep ipa|grep -v grep`
+res=`echo $?`
+
+if [ $res -ne 0 ];then
+sh -c "cd /; /usr/local/etc/rc.d/ipa.sh stop < /dev/null > /dev/null 2> /dev/null &" 
+sh -c "cd /; /usr/local/etc/rc.d/ipa.sh start < /dev/null > /dev/null 2> /dev/null &" 
+fi
